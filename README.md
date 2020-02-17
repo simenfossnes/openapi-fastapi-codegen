@@ -1,8 +1,12 @@
-# Readme. 
+# OpenAPI Spec -> FastAPI | CodeGen
 
-Code-gen from OpenAPI specs in yaml-format to FastAPI. 
-(done in python3)
+<p align="center">
+  <a href="#"><img src=".github/illustration.svg" /></a>
+</p>
 
-### TODOs: 
-- [ ] make this list.  
-- [ ] ...
+Generate FastAPI server stubs based on an open api specification file.
+
+## TODOs
+
+- [x] add illustration.
+- [ ] make this list.
