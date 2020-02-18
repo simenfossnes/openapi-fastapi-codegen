@@ -64,18 +64,18 @@ from functools import reduce
         
     def export(self):
         "export function when the yaml has been worked through"
-        non_dependent = [model_val for model_key,model_val in self.models if model_key not in self.model_refs.values()]
-        dependent = [model_val for model_key,model_val in self.models if model_key in self.model_refs.values()]
-            
+        non_dependent = [model_val for model_key,model_val in self.models.items() if model_key not in self.model_refs.values()]
+        dependent = [model_val for model_key,model_val in self.models.items() if model_key in self.model_refs.values()]
+        print(non_dependent)
         output = r'''
 {0}
 {1}
 {2}      
 {3}
         '''.format( self.header, 
-                    self.types.values(),
-                    reduce(lambda x,y: r'{}\n{}'.format(x,y), non_dependent), 
-                    reduce(lambda x,y: r'{}\n{}'.format(x,y),dependent))
+                    reduce(lambda x,y: '{}\n\n{}'.format(x,y), self.types.values()),
+                    reduce(lambda x,y: '{}\n\n{}'.format(x,y), non_dependent ) if non_dependent else '', 
+                    reduce(lambda x,y: '{}\n\n{}'.format(x,y),dependent) if dependent else '')
         return output
         
     def ref_interpret(self,yaml_input,parent=None):
@@ -102,7 +102,7 @@ from functools import reduce
     {3}'''.format(title.capitalize(),
                    typ,
                    descr, 
-                   reduce(lambda x,y: "{}\n    {}".format(x,y), enum_lines))
+                   reduce(lambda x,y: "{}\n    {}".format(x,y), enum_lines) if enum_lines else 'pass')
         self.namespace[title] = 'Types'
         self.types[title] = content
         return title.capitalize() # returns this so that it's 
@@ -129,7 +129,7 @@ from functools import reduce
         else:
             typ_= self.type_interpret(yaml_input['type']) if 'type' in yaml_input.keys() else 'None'
         descr_string = yaml_input['description'] if 'description' in yaml_input.keys() else 'no description'
-        description = '"{}"'.format(descr_string.replace('\n',' '))
+        description = '"{}"'.format(descr_string.replace('\n',' ')) if descr_string else 'no description'
         return r"""{0}: {1} = Field({2}, description={3})""".format(title,typ_,req,description)
         
     
@@ -150,8 +150,10 @@ class {0}(BaseModel):
     '''
     {1}
     '''
-    {2}""".format(title.capitalize(),description,reduce(lambda x,y: "{}\n    {}".format(x,y), properties) if properties else "Pass")
-        self.model[title] = content
+    {2}""".format(  title.capitalize(),
+                    description,
+                    reduce(lambda x,y: "{}\n    {}".format(x,y), properties) if properties else "pass")
+        self.models[title] = content
         self.namespace[title] = 'Models'
         
     def interpretation_staging(self,dict_of_names, map_of_dependencies):
@@ -164,7 +166,7 @@ class {0}(BaseModel):
         This means we can traverse them and set the properties either as strings, 
         or just fully build them here. 
         """
-        interpreted = [(self.schema_interpreter(definition,name),name) for name,definition in yaml_input.items()]
+        interpreted = [self.schema_interpreter(definition,name) for name,definition in yaml_input.items()]
         # Given a list of schemas/definitions
         # use tuples to filter by dependencies/references,
         return interpreted
@@ -175,24 +177,26 @@ class {0}(BaseModel):
         definition_models = self.yaml_interpret(yaml_input['definitions'])
 
         formatting = r"""
-{0}
-{1}""".format(reduce(lambda x,y: "{}\n    {}".format(x,y), definition_models))
+{0}""".format(reduce(lambda x,y: "{}\n    {}".format(x,y), definition_models))
         return formatting
         
 
 #%% Run-utils 
         
-def Build_From_Yaml(filename):
-    "Generic function to build from a yaml-filename"
-    
-    #TODO: build-directory
-    
-    pass
-
 
 def write_to_py(content,filename='yaml_test.py'):
     with open(filename,'w') as f:
-        f.write(content)
+        f.write(content)    
+
+def Build_From_Yaml(filename):
+    "Generic function to build from a yaml-filename"
+    yaml_from_file = read_yaml(filename)
+    #TODO: build-directory
+    test = Interpreter() 
+    test.definitions_interpreter(yaml_from_file)
+    write_to_py(test.export())
+
+
 
 #%% Magic. 
 
