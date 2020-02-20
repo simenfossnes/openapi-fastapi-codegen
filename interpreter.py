@@ -24,7 +24,11 @@ def read_yaml(filename):
     return content
     
 
-
+def string_convert(string): 
+    #TODO: Make flexible for titles, etc... and pervasive throughout. 
+    "From utf-8 valid variable-name (lower-case and underscore)"
+    return "".join([ char if char.isalnum() or char in ["&"," ","-"] else "" 
+                    for char in string]).replace(" ", "_").replace("&","and").replace("-","_")
 #%% Intepretation:
 """
 Stages of interpretation: 
@@ -66,7 +70,7 @@ from functools import reduce
         "export function when the yaml has been worked through"
         non_dependent = [model_val for model_key,model_val in self.models.items() if model_key not in self.model_refs.values()]
         dependent = [model_val for model_key,model_val in self.models.items() if model_key in self.model_refs.values()]
-        print(non_dependent)
+        #print(non_dependent)
         output = r'''
 {0}
 {1}
@@ -93,7 +97,7 @@ from functools import reduce
         title = yaml_input['title'] if 'title' in yaml_input.keys() else '_title'
         typ = self.type_interpret(yaml_input['type']) if 'type' in yaml_input.keys() else str
         
-        enum_lines = [r"{0} = '{1}'".format(cont.lower(),cont) for cont in yaml_input['enum']]
+        enum_lines = [r"{0} = '{1}'".format(string_convert(cont.lower()),cont) for cont in yaml_input['enum']]
         
         content= r'''class {0}({1},Enum):
     """
@@ -129,13 +133,14 @@ from functools import reduce
         else:
             typ_= self.type_interpret(yaml_input['type']) if 'type' in yaml_input.keys() else 'None'
         descr_string = yaml_input['description'] if 'description' in yaml_input.keys() else 'no description'
-        description = '"{}"'.format(descr_string.replace('\n',' ')) if descr_string else 'no description'
-        return r"""{0}: {1} = Field({2}, description={3})""".format(title,typ_,req,description)
+        description = '"{}"'.format(descr_string.replace('\n',' ')) if descr_string else '"no description"'
+        return r"""{0}: {1} = Field({2}, description={3})""".format(string_convert(title).lower(),typ_,req,description)
         
     
     def schema_interpreter(self,yaml_input,name):
         "Take in a single schema and unpack it."
         print(name)
+        print(yaml_input.keys())
         description = yaml_input['description'] if 'description' in yaml_input.keys() else 'no description'# 1
         required = yaml_input['required'] if 'required' in yaml_input.keys() else []
         # Below we get pass the tuple of property and required-boolean
@@ -150,7 +155,7 @@ class {0}(BaseModel):
     '''
     {1}
     '''
-    {2}""".format(  title.capitalize(),
+    {2}""".format(  string_convert(title),
                     description,
                     reduce(lambda x,y: "{}\n    {}".format(x,y), properties) if properties else "pass")
         self.models[title] = content
@@ -180,6 +185,21 @@ class {0}(BaseModel):
 {0}""".format(reduce(lambda x,y: "{}\n    {}".format(x,y), definition_models))
         return formatting
         
+
+#%% OAS class 
+        
+class OAS(Interpreter):
+    "Subclass for OAS-interpretation."
+    #TODO: Additional support for the OAS-structures:
+    # - components 
+    # - - schemas (same struct at yaml. )
+    # - - ... 
+    # - info
+    # - paths 
+    # - tags
+    # - - name: 
+    # - - description
+    # - openapi (str) 
 
 #%% Run-utils 
         
