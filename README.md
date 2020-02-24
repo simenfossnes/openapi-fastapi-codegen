@@ -10,9 +10,10 @@ Generate FastAPI server stubs based on an open api specification file.
 ## TODOs
 
 - [x] add illustration.
-- [ ] make this list.
+- [x] make this list.
 - [ ] extend and vectorize cases (may use numpy cases for this.)
-- [ ] make tail-recursion on the interpreter, allowing "flatter" parsing. ?  
+- [x] make tail-recursion on the interpreter, allowing "flatter" parsing. ?  - solved differently
 - [ ] Add command line execution and configs 
 - [ ] add requirements.txt + requirements in README
-- [ ] Add string formatting / fix automation so that the naming has a max-length and no whitespace
+- [x] Add string formatting / fix automation so that the naming has a max-length and no whitespace
+- [ ] fix references and inheritance using these "allOf" etc. 

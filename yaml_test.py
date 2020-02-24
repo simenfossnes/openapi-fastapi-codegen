@@ -10,14 +10,38 @@ from pydantic import BaseModel, Field
 from typing import List, Union, Tuple
 from functools import reduce
 
-class _title(str,Enum):
+###################
+# Enums and Types #
+###################
+class currency(str,Enum):
+    """
+    A three-letter [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217) currency code, in lowercase. We currently support `nok`, `eur` and `usd` only.
+    """
+    nok = 'nok'
+    eur = 'eur'
+    usd = 'usd'
+
+class type(str,Enum):
+    """
+    String representing the object's type. Objects of the same type share the same value.
+    """
+    file = 'file'
+
+class fileFormat(str,Enum):
+    """
+    The specific information encoding method used.
+    """
+    jpg = 'jpg'
+    png = 'png'
+
+class feedbackPreference(str,Enum):
     """
     A description of how you like to receive feedback. This is different from person to person.
     """
     clear_to_the_point___no_fluff = 'clear, to the point - no fluff'
     positive_and_constructive = 'positive & constructive'
 
-class Jobseekerstatus(str,Enum):
+class jobSeekerStatus(str,Enum):
     """
     the current job status of the user
     """
@@ -25,7 +49,43 @@ class Jobseekerstatus(str,Enum):
     not_available = 'Not available'
     open_to_offers = 'Open to Offers'
 
-class Visibility(str,Enum):
+class OrganizationType(str,Enum):
+    """
+    The type of organization.
+    """
+    company = 'company'
+    ngo = 'ngo'
+    igo = 'igo'
+    non_profit = 'non-profit'
+    governmentdepartment = 'government_department'
+    governmentagency = 'government_agency'
+
+class ExpressionTypes(str,Enum):
+    """
+    Different kinds of expressions.
+    """
+    text = 'text'
+    math = 'math'
+    code = 'code'
+    image = 'image'
+    audio = 'audio'
+    animation = 'animation'
+    video = 'video'
+
+class ExerciseTypes(str,Enum):
+    """
+    Different kinds of exercises.
+    """
+    freeform = 'free_form'
+    multiplechoice = 'multiple_choice'
+    fillintheblank = 'fill_in_the_blank'
+    commandline = 'command_line'
+    codesnippet = 'code_snippet'
+    codebase = 'codebase'
+    database = 'database'
+    codereview = 'code_review'
+
+class visibility(str,Enum):
     """
     Whether or not to show the test case.
     """
@@ -33,7 +93,24 @@ class Visibility(str,Enum):
     partially_hidden = 'Partially Hidden'
     visible = 'Visible'
 
-class Difficulty(str,Enum):
+class TestCaseTypes(str,Enum):
+    """
+    the typue of test case
+    """
+    codequality = 'code_quality'
+    custom = 'custom'
+    io = 'io'
+    unit = 'unit'
+
+class CorrectionRecordType(str,Enum):
+    """
+    the typue of test case
+    """
+    automatic = 'automatic'
+    manual = 'manual'
+    ai = 'ai'
+
+class difficulty(str,Enum):
     """
     The difficulty level of the challenge.
     """
@@ -41,12 +118,25 @@ class Difficulty(str,Enum):
     beginner = 'Beginner'
     intermediate = 'Intermediate'
 
-class Type(str,Enum):
+class ChallengeTypes(str,Enum):
     """
     The type of challenge.
     """
-    live_quiz = 'Live Quiz'
-    online_project = 'Online Project'
+    livequiz = 'live_quiz'
+    onlineproject = 'online_project'
+
+class CourseTypes(str,Enum):
+    """
+    Different types of courses.
+    """
+    article = 'article'
+    book = 'book'
+    project = 'project'
+    videoseries = 'video_series'
+##########
+# Models #
+##########
+# independent Models:
 
 class id(BaseModel):
     '''
@@ -65,13 +155,6 @@ class userId(BaseModel):
 class timestamp(BaseModel):
     '''
     Date and Time at which the object was created. Measured in seconds since the Unix epoch.
-    '''
-    pass
-
-
-class currency(BaseModel):
-    '''
-    A three-letter [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217) currency code, in lowercase. We currently support `nok`, `eur` and `usd` only.
     '''
     pass
 
@@ -109,7 +192,7 @@ class Price(BaseModel):
     The cost of something in a certain currency.
     '''
     amount: int = Field(None, description="A positive integer in the smallest currency unit (that is,  100 cents for $1.00, or 1 for ¥1, Japanese Yen being a  zero-decimal currency)")
-    currency: None = Field(None, description="no_description")
+    currency: currency = Field(None, description="no description")
 
 
 class Address(BaseModel):
@@ -117,7 +200,7 @@ class Address(BaseModel):
     Details about where someone or something is situated.
     '''
     city: str = Field(None, description="City, district, suburb, town, or village.")
-    country: None = Field(None, description="no_description")
+    country: country = Field(None, description="no description")
     line1: str = Field(None, description="Address line 1 (e.g., street, PO Box, or company name).")
     line2: str = Field(None, description="Address line 2 (e.g., apartment, suite, unit, or building).")
     postalcode: str = Field(None, description="ZIP or postal code.")
@@ -151,6 +234,20 @@ class ProgrammingLanguage(BaseModel):
     logourl: str = Field(..., description="A url to the logo of the language.")
 
 
+class File(BaseModel):
+    '''
+    An object with information about a file.
+    '''
+    id: timestamp = Field(..., description="no description")
+    created: timestamp = Field(..., description="no description")
+    title: str = Field(None, description="A user friendly title for the file.")
+    filename: str = Field(None, description="A filename for the file, suitable for saving to a filesystem.")
+    type: type = Field(..., description="String representing the object's type. Objects of the same type share the same value.")
+    size: None = Field(..., description="The size in bytes of the file object.")
+    fileformat: fileFormat = Field(None, description="The specific information encoding method used.")
+    url: str = Field(..., description="The URL from which the file can be downloaded using your live secret API key.")
+
+
 class User(BaseModel):
     '''
     The basic data structure given by Auth0.
@@ -163,9 +260,9 @@ class User(BaseModel):
     phoneverified: bool = Field(..., description="Whether this phone number has been verified (true) or not (false).")
     createdat: str = Field(..., description="Date and time when this user was created (ISO_8601 format).")
     updatedat: str = Field(..., description="Date and time when this user was last updated/modified (ISO_8601 format).")
-    identities: List[str] = Field(..., description="Array of user identity objects when accounts are linked.")
-    appmetadata: None = Field(..., description="Stores user attributes such as preferences that do not impact a user's core functionality.")
-    usermetadata: None = Field(..., description="Stores information (such as, support plan subscriptions, security roles, or access control groups) that can impact a user's core functionality.")
+    identities: List[Identity] = Field(..., description="Array of user identity objects when accounts are linked.")
+    appmetadata: AppMetadata = Field(..., description="Stores user attributes such as preferences that do not impact a user's core functionality.")
+    usermetadata: UserMetadata = Field(..., description="Stores information (such as, support plan subscriptions, security roles, or access control groups) that can impact a user's core functionality.")
     picture: str = Field(..., description="URL to picture, photo, or avatar of this user.")
     name: str = Field(..., description="Name of this user.")
     nickname: str = Field(..., description="Preferred nickname or alias of this user.")
@@ -184,9 +281,9 @@ class UserMetadata(BaseModel):
 core functionality.
     '''
     skills: List[str] = Field(..., description="a set of tags meant to reperesent skills")
-    feedbackpreference: _title = Field(None, description="A description of how you like to receive feedback. This is different from person to person.")
-    jobseekerstatus: Jobseekerstatus = Field(..., description="the current job status of the user")
-    programminglangauges: List[str] = Field(..., description="the current job status of the user")
+    feedbackpreference: feedbackPreference = Field(None, description="A description of how you like to receive feedback. This is different from person to person.")
+    jobseekerstatus: jobSeekerStatus = Field(..., description="the current job status of the user")
+    programminglangauges: List[ProgrammingLanguage] = Field(..., description="the current job status of the user")
 
 
 class AppMetadata(BaseModel):
@@ -194,90 +291,92 @@ class AppMetadata(BaseModel):
     Stores information (such as, support plan subscriptions, security roles,
 or access control groups) that can impact a user's core functionality.
     '''
-    plan: str = Field(..., description="no_description")
+    plan: str = Field(..., description="no description")
 
 
 class Identity(BaseModel):
     '''
     no description
     '''
-    connection: str = Field(..., description="no_description")
-    userid: str = Field(..., description="no_description")
-    provider: str = Field(..., description="no_description")
-    issocial: bool = Field(..., description="no_description")
+    connection: str = Field(..., description="no description")
+    userid: str = Field(..., description="no description")
+    provider: str = Field(..., description="no description")
+    issocial: bool = Field(..., description="no description")
 
 
 class Organization(BaseModel):
     '''
     An organized group of people with a particular purpose, such as a business, government agency, non-profit, etc.
     '''
-    id: None = Field(..., description="no_description")
+    id: id = Field(..., description="no description")
     name: str = Field(..., description="The name of the orgnization.")
-    extra_info: str = Field(None, description="The number given, proving that the organization exists.")
+    organizationnumber: str = Field(None, description="The number given, proving that the organization exists.")
     visionstatement: str = Field(None, description="A short, descriptive text of what future the organization aims to bring about.")
-    type: None = Field(..., description="no_description")
-    logourl: None = Field(..., description="no_description")
+    type: OrganizationType = Field(..., description="no description")
+    organizationbranding: OrganizationBranding = Field(None, description="no description")
 
 
-class type(BaseModel):
+class OrganizationBranding(BaseModel):
     '''
-    The type of challenge.
+    The branding associated with the organization.
     '''
-    pass
+    icon: None = Field(None, description="An icon for the account. Must be square and at least 128px x 128px.")
+    logo: None = Field(None, description="A logo for the account that will be used in on pages. Must be at least 128px x 128px.")
+    primarycolor: str = Field(None, description="A CSS hex color value representing the primary branding color for this account.")
 
 
 class Expression(BaseModel):
     '''
     An expression is a captured moment of menaingful communication - in a speficic medium and/or form.
     '''
-    id: None = Field(..., description="no_description")
-    created: None = Field(..., description="no_description")
-    type: None = Field(..., description="no_description")
+    id: id = Field(..., description="no description")
+    created: timestamp = Field(..., description="no description")
+    type: ExpressionTypes = Field(..., description="no description")
 
 
-class Text_Expression(BaseModel):
+class TextExpression(BaseModel):
     '''
     Expressions captured in rich text.
     '''
     pass
 
 
-class Math_Expression(BaseModel):
+class MathExpression(BaseModel):
     '''
     Expressions captured in mathematical notation.
     '''
     pass
 
 
-class Code_Expression(BaseModel):
+class CodeExpression(BaseModel):
     '''
     Expressions captured in various coding languages.
     '''
     pass
 
 
-class Image_Expression(BaseModel):
+class ImageExpression(BaseModel):
     '''
     Expressions captured in image form.
     '''
     pass
 
 
-class Audio_Expression(BaseModel):
+class AudioExpression(BaseModel):
     '''
     Expressions captured in the form of sound.
     '''
     pass
 
 
-class Animation_Expression(BaseModel):
+class AnimationExpression(BaseModel):
     '''
     Expressions captured in image sequence form; without sound.
     '''
     pass
 
 
-class Video_Expression(BaseModel):
+class VideoExpression(BaseModel):
     '''
     Expressions captured in video form.
     '''
@@ -288,63 +387,63 @@ class Exercise(BaseModel):
     '''
     An exercise introduces you to, and invites you to complete, a specific activity.
     '''
-    id: None = Field(..., description="no_description")
-    created: None = Field(..., description="no_description")
-    promoimage: None = Field(None, description="no_description")
-    description: List[str] = Field(..., description="A set of expressions combined to form a rich description of the activity requested.")
-    type: None = Field(..., description="no_description")
+    id: id = Field(..., description="no description")
+    created: timestamp = Field(..., description="no description")
+    promoimage: None = Field(None, description="no description")
+    description: List[None] = Field(..., description="A set of expressions combined to form a rich description of the activity requested.")
+    type: ExerciseTypes = Field(..., description="no description")
 
 
-class Free_Form_Exercise(BaseModel):
+class FreeFormExercise(BaseModel):
     '''
     An exercise expecting a free-form text answer.
     '''
     pass
 
 
-class Multiple_Choice_Exercise(BaseModel):
+class MultipleChoiceExercise(BaseModel):
     '''
     An exercise providing multiple choices, of which one or more is correct.
     '''
     pass
 
 
-class Fill_In_The_Blank_Exercise(BaseModel):
+class FillInTheBlankExercise(BaseModel):
     '''
     An exercise providing text with blnak fields to fill in.
     '''
     pass
 
 
-class Command_Line_Exercise(BaseModel):
+class CommandLineExercise(BaseModel):
     '''
     An exercise where your write a command in the command line.
     '''
     pass
 
 
-class Code_Snippet_Exercise(BaseModel):
+class CodeSnippetExercise(BaseModel):
     '''
     An exercise expecting a single file of code (a snippet, aka. gist) as the answer.
     '''
     pass
 
 
-class Codebase_Exercise(BaseModel):
+class CodebaseExercise(BaseModel):
     '''
     An exercise expecting an entire codebase (multiple files and folders) as the answer.
     '''
     pass
 
 
-class Database_Exercise(BaseModel):
+class DatabaseExercise(BaseModel):
     '''
     An exercise where you perform various database operations such as a query.
     '''
     pass
 
 
-class Code_Review_Exercise(BaseModel):
+class CodeReviewExercise(BaseModel):
     '''
     An exercise where you review some code, leave comments, etc.
     '''
@@ -358,10 +457,10 @@ an exercise. In other words, it's a response that attempts to answer the
 problem stated in the exercise description.
 
     '''
-    id: None = Field(..., description="no_description")
-    created: None = Field(..., description="no_description")
+    id: id = Field(..., description="no description")
+    created: timestamp = Field(..., description="no description")
     status: str = Field(..., description="Correction/validation stage, going by whether the answer has been.")
-    type: None = Field(..., description="no_description")
+    type: AnswerTypes = Field(..., description="no description")
 
 
 class AnswerTypes(BaseModel):
@@ -371,7 +470,7 @@ class AnswerTypes(BaseModel):
     pass
 
 
-class Codebase_Answer(BaseModel):
+class CodebaseAnswer(BaseModel):
     '''
     Files and folders (filesystem) constituting an answer to a `Codebase Exercise`.
     '''
@@ -382,44 +481,37 @@ class CorrectionBlueprint(BaseModel):
     '''
     The blueprint for how to correct an answer to an exercise.
     '''
-    id: None = Field(..., description="no_description")
-    created: None = Field(..., description="no_description")
-    type: None = Field(..., description="no_description")
+    id: id = Field(..., description="no description")
+    created: timestamp = Field(..., description="no description")
+    type: ExerciseTypes = Field(..., description="no description")
     allowautomaticcorrection: bool = Field(None, description="Whether to allow automatic correction or not.")
     allowmanualcorrection: bool = Field(None, description="Whether to allow manual correction or not.")
     allowaicorrection: bool = Field(None, description="Whether to allow artificial intelligence correction or not.")
-    requirements: List[str] = Field(..., description="A list of requirements to be corrected for")
+    requirements: List[Requirement] = Field(..., description="A list of requirements to be corrected for")
 
 
 class Requirement(BaseModel):
     '''
-    <comment placeholder>
+    A specific element you expect to be part of a correct solution.
     '''
-    id: None = Field(..., description="no_description")
+    id: id = Field(..., description="no description")
     title: str = Field(..., description="A indicative text for the requirement.")
     description: str = Field(None, description="A text with more detailed information about the requirement.")
     weight: int = Field(None, description="A number signifying the importance of the")
-    automatictests: List[str] = Field(None, description="The automatic test cases to run to correct for the requirement.")
-    failureresponses: List[str] = Field(..., description="A set of potential feedback objects to display to students upon failing requirement.")
+    automatictests: List[TestCase] = Field(None, description="The automatic test cases to run to correct for the requirement.")
+    failureresponses: List[Feedback] = Field(..., description="A set of potential feedback objects to display to students upon failing requirement.")
 
 
 class TestCase(BaseModel):
     '''
     The tests used to automaticaly correct the requirements
     '''
-    id: None = Field(..., description="no_description")
-    type: None = Field(..., description="no_description")
-    visibility: Visibility = Field(..., description="Whether or not to show the test case.")
+    id: id = Field(..., description="no description")
+    type: TestCaseTypes = Field(..., description="no description")
+    visibility: visibility = Field(..., description="Whether or not to show the test case.")
     explaincommonerrors: bool = Field(..., description="Whether or not to explain universal and common errors.")
-    studentdebugginginfo: None = Field(..., description="no_description")
+    studentdebugginginfo: None = Field(..., description="no description")
     successthreshold: int = Field(..., description="The percentage required to consider the test case passed.")
-
-
-class Test_Case_Types(BaseModel):
-    '''
-    the typue of test case
-    '''
-    pass
 
 
 class IOTestCase(BaseModel):
@@ -450,7 +542,7 @@ class CodeQualityTestCase(BaseModel):
     pass
 
 
-class Debugging_Info(BaseModel):
+class DebuggingInfo(BaseModel):
     '''
     The tests used to automaticaly correct the requirements
     '''
@@ -462,28 +554,21 @@ class Debugging_Info(BaseModel):
     showoutputdifference: bool = Field(..., description="Whether to show the difference between the supplied and expected output to the student or not.")
 
 
-class Correction_History(BaseModel):
+class CorrectionHistory(BaseModel):
     '''
     The object containing the history of users's exercise answer corrections
     '''
-    exerciseid: None = Field(..., description="no_description")
-    userid: None = Field(..., description="no_description")
-    corrections: List[str] = Field(..., description="A collection of performed corrections.")
+    exerciseid: id = Field(..., description="no description")
+    userid: userId = Field(..., description="no description")
+    corrections: List[CorrectionRecord] = Field(..., description="A collection of performed corrections.")
 
 
 class CorrectionRecord(BaseModel):
     '''
     The model for a recorded correction result.
     '''
-    id: None = Field(..., description="no_description")
-    type: None = Field(..., description="no_description")
-
-
-class Correction_Record_Type(BaseModel):
-    '''
-    the typue of test case
-    '''
-    pass
+    id: id = Field(..., description="no description")
+    type: CorrectionRecordType = Field(..., description="no description")
 
 
 class AutmaticCorrectionRecord(BaseModel):
@@ -493,14 +578,14 @@ class AutmaticCorrectionRecord(BaseModel):
     pass
 
 
-class Manual_Correction_Record(BaseModel):
+class ManualCorrectionRecord(BaseModel):
     '''
     The model for a recorded manual correction results.
     '''
     pass
 
 
-class AI_Correction_Record(BaseModel):
+class AICorrectionRecord(BaseModel):
     '''
     The model for a recorded AI correction results.
     '''
@@ -511,31 +596,31 @@ class Feedback(BaseModel):
     '''
     Content and emotion produced in reaction to something. The materialization of something felt or thought in response to a situation or event. It can be affirmative, constructive, etc.
     '''
-    id: None = Field(..., description="no_description")
-    created: None = Field(..., description="no_description")
+    id: id = Field(..., description="no description")
+    created: timestamp = Field(..., description="no description")
     emoji: str = Field(None, description="A representation of the emotional state associated with the feedback message.")
-    description: List[str] = Field(..., description="A set of expressions combined to form a rich feedback message.")
+    description: List[Expression] = Field(..., description="A set of expressions combined to form a rich feedback message.")
 
 
 class Challenge(BaseModel):
     '''
     Basically a set of exercises combined for the purpose of testing skills.
     '''
-    id: None = Field(..., description="no_description")
-    object: None = Field(None, description="no_description")
-    type: None = Field(..., description="no_description")
-    created: None = Field(..., description="no_description")
+    id: id = Field(..., description="no description")
+    object: None = Field(None, description="no description")
+    type: ChallengeTypes = Field(..., description="no description")
+    created: timestamp = Field(..., description="no description")
     title: str = Field(..., description="A short text describing the challenge.")
     tagline: str = Field(..., description="A short add-on text, adding more details to the title.")
-    description: List[str] = Field(None, description="A in-depth text describing the challenge.")
-    description: List[str] = Field(None, description="A set of keywords related to the challenge.")
+    description: List[ChallengeDescriptionSection] = Field(None, description="A in-depth text describing the challenge.")
+    tags: List[str] = Field(None, description="A set of keywords related to the challenge.")
     promoimage: str = Field(..., description="A visual description of the challenge.")
     promovideo: str = Field(None, description="In-depth stimulating descrpitionof the challenge.")
     duration: int = Field(None, description="Total time, measured in seconds")
-    difficulty: Difficulty = Field(None, description="The difficulty level of the challenge.")
-    langauges: List[str] = Field(None, description="The supported languages for this challenge.")
-    exercises: List[str] = Field(None, description="The exercises making up the challenge.")
-    organizers: List[str] = Field(..., description="The organization(s) hosting the challenge")
+    difficulty: difficulty = Field(None, description="The difficulty level of the challenge.")
+    langauges: List[Language] = Field(None, description="The supported languages for this challenge.")
+    exercises: List[Exercise] = Field(None, description="The exercises making up the challenge.")
+    organizers: List[Organization] = Field(..., description="The organization(s) hosting the challenge")
 
 
 class ChallengeDescriptionSection(BaseModel):
@@ -545,67 +630,38 @@ class ChallengeDescriptionSection(BaseModel):
     headline: str = Field(None, description="The headline of the section.")
     bodycopy: str = Field(None, description="Approximately a paragraph of text describing the section.")
     label: str = Field(None, description="A piece of text describing the section.")
-    featuredexpression: None = Field(None, description="no_description")
+    featuredexpression: Expression = Field(None, description="no description")
 
 
 class OnlineProjectChallenge(BaseModel):
     '''
     Online project challenge.
     '''
-    id: str = Field(..., description="Unique identifier for the object.")
-    created: str = Field(..., description="Date and Time at which the object was created. Measured in seconds since the Unix epoch.")
-    title: str = Field(..., description="A short text describing the challenge.")
-    tagline: str = Field(..., description="A short add-on text, adding more details to the title.")
-    description: str = Field(None, description="A in-depth text describing the challenge.")
-    promoimage: str = Field(..., description="A visual description of the challenge.")
-    promovideo: str = Field(None, description="In-depth stimulating descrpitionof the challenge.")
-    duration: int = Field(None, description="Total time, measured in seconds")
-    difficulty: Difficulty = Field(None, description="The difficulty level of the challenge.")
-    langauges: List[str] = Field(None, description="The supported languages for this challenge.")
-    type: Type = Field(..., description="The type of challenge.")
-    organizers: List[str] = Field(..., description="The organization(s) hosting the challenge")
+    pass
 
 
 class LiveQuizChallenge(BaseModel):
     '''
     Live quiz challenge
     '''
-    id: str = Field(..., description="Unique identifier for the object.")
-    created: str = Field(..., description="Date and Time at which the object was created. Measured in seconds since the Unix epoch.")
-    title: str = Field(..., description="A short text describing the challenge.")
-    tagline: str = Field(..., description="A short add-on text, adding more details to the title.")
-    description: str = Field(None, description="A in-depth text describing the challenge.")
-    promoimage: str = Field(..., description="A visual description of the challenge.")
-    promovideo: str = Field(None, description="In-depth stimulating descrpitionof the challenge.")
-    duration: int = Field(None, description="Total time, measured in seconds")
-    difficulty: Difficulty = Field(None, description="The difficulty level of the challenge.")
-    langauges: List[str] = Field(None, description="The supported languages for this challenge.")
-    type: Type = Field(..., description="The type of challenge.")
-    organizers: List[str] = Field(..., description="The organization(s) hosting the challenge")
+    pass
 
 
 class Course(BaseModel):
     '''
     a collection of expressions and exercises combined for the purpose of teaching something.
     '''
-    id: None = Field(..., description="no_description")
-    created: None = Field(..., description="no_description")
-    type: None = Field(..., description="no_description")
+    id: id = Field(..., description="no description")
+    created: timestamp = Field(..., description="no description")
+    type: CourseTypes = Field(..., description="no description")
     title: str = Field(..., description="The title of the course")
     tagline: str = Field(..., description="no description")
-    description: List[str] = Field(..., description="A rich description of the course using an array of expressions")
+    description: List[Expression] = Field(..., description="A rich description of the course using an array of expressions")
     promovideo: str = Field(None, description="A promo video to introduce the course.")
     promoimage: str = Field(None, description="A promo image to make people interested in the course.")
 
 
-class Course_Types(BaseModel):
-    '''
-    Different types of courses.
-    '''
-    pass
-
-
-class Book(BaseModel):
+class BookCourse(BaseModel):
     '''
     Uhm... a book. That's what this represents.
     '''
@@ -616,15 +672,15 @@ class Chapter(BaseModel):
     '''
     no description
     '''
-    id: None = Field(..., description="no_description")
-    created: None = Field(..., description="no_description")
+    id: id = Field(..., description="no description")
+    created: timestamp = Field(..., description="no description")
     title: str = Field(..., description="The title of the chapter")
     parent: str = Field(..., description="The id of the parent chapeter.")
     treeindex: str = Field(..., description="The placement in the chapter hieararchy.")
-    contentadapters: List[str] = Field(..., description="The content found inside the chapter.")
+    contentadapters: List[ContentAdapter] = Field(..., description="The content found inside the chapter.")
 
 
-class Project(BaseModel):
+class ProjectCourse(BaseModel):
     '''
     A project is a practically-oriented course.
     '''
@@ -633,23 +689,24 @@ class Project(BaseModel):
 
 class Iteration(BaseModel):
     '''
-    <comment placeholder>
+    A single step, a working version, of the project.
     '''
-    id: None = Field(..., description="no_description")
-    created: None = Field(..., description="no_description")
+    id: id = Field(..., description="no description")
+    created: timestamp = Field(..., description="no description")
     title: str = Field(..., description="The title of the iteration.")
     description: str = Field(..., description="A description of the iteration.")
     promovideo: str = Field(..., description="A video showing how the product should look after the iteration.")
-    exercise: None = Field(..., description="no_description")
+    exercise: None = Field(..., description="no description")
 
 
 class ContentAdapter(BaseModel):
     '''
     no description
     '''
-    id: None = Field(..., description="no_description")
-    created: None = Field(..., description="no_description")
+    id: id = Field(..., description="no description")
+    created: timestamp = Field(..., description="no description")
     expression: None = Field(..., description="The main part of the content adapter; an expression.")
-    exercises: List[str] = Field(..., description="The exercises connected to the expression, through the content adapter.")      
+    exercises: List[Exercise] = Field(..., description="The exercises connected to the expression, through the content adapter.")      
 
+        
         

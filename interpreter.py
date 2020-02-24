@@ -62,9 +62,11 @@ from functools import reduce
         self.models = {} # Name: string-interpretation (raw-str)
         self.types = {} # Name: string-interpretation (raw-str), 
         self.namespace = {} # Name : 'Types'/'Models' 
+        # ^on the name-space, this is used for refs. so storing them 
+        #  currently only by their 
         self.model_refs = {} # name : name 
         # references are from models to models, or types to models
-        
+        self.name = "<name of yaml + loc>"
         
     def export(self):
         "export function when the yaml has been worked through"
@@ -73,65 +75,93 @@ from functools import reduce
         #print(non_dependent)
         output = r'''
 {0}
+###################
+# Enums and Types #
+###################
 {1}
+##########
+# Models #
+##########
+# independent Models:
 {2}      
 {3}
+
         '''.format( self.header, 
                     reduce(lambda x,y: '{}\n\n{}'.format(x,y), self.types.values()),
                     reduce(lambda x,y: '{}\n\n{}'.format(x,y), non_dependent ) if non_dependent else '', 
                     reduce(lambda x,y: '{}\n\n{}'.format(x,y),dependent) if dependent else '')
         return output
         
-    def ref_interpret(self,yaml_input,parent=None):
+    def ref_interpret(self,yaml_input):
         "For each case of $ref we need to store a pointer in the model_maps\
         that tells us the order we wish to declare these in. "
+        print(yaml_input)
         
-        # Check if 
+        ref = yaml_input['$ref'].split('/')[-1] #assuming it's at an end
+        return ref
+        # Check if existing in namespace, in which case use that reference. 
+        
         
         
     
-    def enum_interpret(self,yaml_input):
+    def enum_interpret(self,yaml_input,name):
         "for cases where we have enums, we need to extract these, and build them \
         as their own BaseModel-cases. "
         descr = yaml_input['description'] if 'description' in yaml_input.keys() else '...Generic description...'
-        title = yaml_input['title'] if 'title' in yaml_input.keys() else '_title'
-        typ = self.type_interpret(yaml_input['type']) if 'type' in yaml_input.keys() else str
+        title = name #if name[0].isupper() else name.capitalize() #yaml_input['title'] if 'title' in yaml_input.keys() else name
+        typ = self.type_interpret(yaml_input['type'],yaml_input) if 'type' in yaml_input.keys() else str
         
         enum_lines = [r"{0} = '{1}'".format(string_convert(cont.lower()),cont) for cont in yaml_input['enum']]
-        
+        print(name,enum_lines)
         content= r'''class {0}({1},Enum):
     """
     {2}
     """
-    {3}'''.format(title.capitalize(),
+    {3}'''.format(title,
                    typ,
                    descr, 
                    reduce(lambda x,y: "{}\n    {}".format(x,y), enum_lines) if enum_lines else 'pass')
         self.namespace[title] = 'Types'
         self.types[title] = content
-        return title.capitalize() # returns this so that it's 
+        return title # returns this so that it's 
     
-    def type_interpret(self,type_string,subtype='str'):
+    def type_interpret(self,type_string,yaml_input):
         "interpret and translate types to admissible ones.\
         need to specify subtypes for the arrays etc."
+        
         types = {'string': 'str', 
                  'int':'int',
                  'number':'int',
                  'object':'object',
-                 'boolean' : 'bool',
-                 'array':'List[{}]'.format(subtype)}
-        if type_string in types.keys():
+                 'boolean' : 'bool'}
+        if type_string == 'array':
+            return "List[{}]".format(self.item_interpret(yaml_input['items']) if 'items' in yaml_input.keys() else 'str')
+        elif type_string in types.keys():
             return types[type_string]
+    
+    def item_interpret(self,items):
+        "for items in an array. "
+        for key,val in items.items():
+            if key == '$ref':
+                return self.ref_interpret(items)
+            elif type(val) == list: 
+                str
+            else: 
+                return self.type_interpret(items['type'],items)
+        
     
     def prop_interpret(self,yaml_input,name,required):
         "Interpret properties-field (smaller dictionary)"
         #TODO: Catch prop with $ref into ref_interpreter ?
-        title = yaml_input['title'] if 'title' in yaml_input.keys() else name
+        title = name #yaml_input['title'] if 'title' in yaml_input.keys() else name
         req = '...' if required else None
+        
         if 'enum' in yaml_input.keys():
-            typ_ = self.enum_interpret(yaml_input)
+            typ_ = self.enum_interpret(yaml_input,name)
+        elif '$ref' in yaml_input.keys():
+            typ_ = self.ref_interpret(yaml_input)
         else:
-            typ_= self.type_interpret(yaml_input['type']) if 'type' in yaml_input.keys() else 'None'
+            typ_= self.type_interpret(yaml_input['type'],yaml_input) if 'type' in yaml_input.keys() else 'None'
         descr_string = yaml_input['description'] if 'description' in yaml_input.keys() else 'no description'
         description = '"{}"'.format(descr_string.replace('\n',' ')) if descr_string else '"no description"'
         return r"""{0}: {1} = Field({2}, description={3})""".format(string_convert(title).lower(),typ_,req,description)
@@ -139,25 +169,34 @@ from functools import reduce
     
     def schema_interpreter(self,yaml_input,name):
         "Take in a single schema and unpack it."
-        print(name)
-        print(yaml_input.keys())
+        #print(name)
+        #print(yaml_input.keys())
         description = yaml_input['description'] if 'description' in yaml_input.keys() else 'no description'# 1
-        required = yaml_input['required'] if 'required' in yaml_input.keys() else []
         # Below we get pass the tuple of property and required-boolean
-        
-        properties = [self.prop_interpret(val,key,key in required) for key,val in yaml_input['properties'].items()] \
+        if 'allOf' in yaml_input.keys():
+            subseq = yaml_input['allOf']
+            required = subseq['required'] if 'required' in subseq.keys() else []
+            properties =  [self.prop_interpret(val,key,key in required) for key,val in subseq['properties'].items()] \
+                      if 'properties' in subseq.keys() else None#3
+            parent = self.ref_interpret(subseq['$ref'])
+        else: 
+            required = yaml_input['required'] if 'required' in yaml_input.keys() else []
+            parent = 'BaseModel'
+            properties = [self.prop_interpret(val,key,key in required) for key,val in yaml_input['properties'].items()] \
                       if 'properties' in yaml_input.keys() else None#3
-        title = yaml_input['title'] if 'title' in yaml_input.keys() else name #0
+        
+        title = name#yaml_input['title'] if 'title' in yaml_input.keys() else name #0
         #tpe = yaml_input['type'] #2
         # Add in interpretation of inherited #allOf etc. 
         content= r"""
-class {0}(BaseModel):
+class {0}({3}):
     '''
     {1}
     '''
     {2}""".format(  string_convert(title),
                     description,
-                    reduce(lambda x,y: "{}\n    {}".format(x,y), properties) if properties else "pass")
+                    reduce(lambda x,y: "{}\n    {}".format(x,y), properties) if properties else "pass",
+                    parent)
         self.models[title] = content
         self.namespace[title] = 'Models'
         
@@ -165,13 +204,20 @@ class {0}(BaseModel):
         #TODO: stage the components, i.e. sort based on references
         pass 
     
+        
+    
     def yaml_interpret(self,yaml_input):
         """
         Note: Yamls are loaded as dictionaries. 
         This means we can traverse them and set the properties either as strings, 
         or just fully build them here. 
         """
-        interpreted = [self.schema_interpreter(definition,name) for name,definition in yaml_input.items()]
+        interpreted = []
+        for name,definition in yaml_input.items():
+            if 'enum' in definition.keys():
+                self.enum_interpret(definition,name)    
+            else: 
+                interpreted.append(self.schema_interpreter(definition,name))
         # Given a list of schemas/definitions
         # use tuples to filter by dependencies/references,
         return interpreted
@@ -199,7 +245,29 @@ class OAS(Interpreter):
     # - tags
     # - - name: 
     # - - description
-    # - openapi (str) 
+    # - openapi (str)  - versioning
+    def __init__(self, yaml_input):
+        #Interpreter.__init__()
+        self.components
+        self.servers = yaml_input['servers'] 
+        self.tags = yaml_input['tags'] #name, descript
+        self.openapi = yaml_input['openapi'] # versioning. 
+        self.header = """
+        """
+    
+    def make_get(self, yaml_input):
+        "make get-request"
+        
+        
+    def make_post(self,yaml_input):
+        "make post request"
+    
+    def make_components(self,yaml_input):
+        "basically pad with same as model-interpreting"
+        
+    
+        
+    
 
 #%% Run-utils 
         
@@ -214,6 +282,7 @@ def Build_From_Yaml(filename):
     #TODO: build-directory
     test = Interpreter() 
     test.definitions_interpreter(yaml_from_file)
+    
     write_to_py(test.export())
 
 
