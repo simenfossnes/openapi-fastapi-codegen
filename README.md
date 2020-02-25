@@ -16,4 +16,8 @@ Generate FastAPI server stubs based on an open api specification file.
 - [ ] Add command line execution and configs 
 - [ ] add requirements.txt + requirements in README
 - [x] Add string formatting / fix automation so that the naming has a max-length and no whitespace
-- [ ] fix references and inheritance using these "allOf" etc. 
+- [x] fix references and inheritance using these "allOf" etc. 
+- [ ] implement proper documentation of methods in interpretaiton-class. 
+- [ ] callable generation of OAS via CLI 
+- [ ] resolve whether to import from DataModel or generate schemas in the OAS-app. 
+- [ ] also resolve whether then to import selectively (track required external imports)

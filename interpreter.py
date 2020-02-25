@@ -30,10 +30,11 @@ def string_convert(string):
     return "".join([ char if char.isalnum() or char in ["&"," ","-"] else "" 
                     for char in string]).replace(" ", "_").replace("&","and").replace("-","_")
 #%% Intepretation:
+#TODO: Write this doc. 
 """
+
 Stages of interpretation: 
     1. Yaml is sorted based on whether it's yaml or OAS, 
-    2. ...recurison through yaml, sorting the ordering of the definitions and schemas. 
     3. 
 """    
 
@@ -48,8 +49,7 @@ class Interpreter:
         "Currently just setting up containers for sorting."
         # Note: need to sort the models in order of dependencies. 
         # This means that we'll have to store a map 
-        self.header = r'''
-#!/usr/bin/env python3
+        self.header = r'''#!/usr/bin/env python3
 """
 Generic Statement to be inserted here... 
 """
@@ -73,8 +73,7 @@ from functools import reduce
         non_dependent = [model_val for model_key,model_val in self.models.items() if model_key not in self.model_refs.values()]
         dependent = [model_val for model_key,model_val in self.models.items() if model_key in self.model_refs.values()]
         #print(non_dependent)
-        output = r'''
-{0}
+        output = r'''{0}
 ###################
 # Enums and Types #
 ###################
@@ -82,7 +81,6 @@ from functools import reduce
 ##########
 # Models #
 ##########
-# independent Models:
 {2}      
 {3}
 
@@ -94,9 +92,7 @@ from functools import reduce
         
     def ref_interpret(self,yaml_input):
         "For each case of $ref we need to store a pointer in the model_maps\
-        that tells us the order we wish to declare these in. "
-        print(yaml_input)
-        
+        that tells us the order we wish to declare these in. "        
         ref = yaml_input['$ref'].split('/')[-1] #assuming it's at an end
         return ref
         # Check if existing in namespace, in which case use that reference. 
@@ -135,7 +131,10 @@ from functools import reduce
                  'object':'object',
                  'boolean' : 'bool'}
         if type_string == 'array':
+            #print(yaml_input)
             return "List[{}]".format(self.item_interpret(yaml_input['items']) if 'items' in yaml_input.keys() else 'str')
+        elif 'allOf' in yaml_input.keys():
+            return self.ref_interpret(yaml_input['allOf'][0])
         elif type_string in types.keys():
             return types[type_string]
     
@@ -160,6 +159,8 @@ from functools import reduce
             typ_ = self.enum_interpret(yaml_input,name)
         elif '$ref' in yaml_input.keys():
             typ_ = self.ref_interpret(yaml_input)
+        elif 'allOf' in yaml_input.keys():
+            typ_ = self.ref_interpret(yaml_input['allOf'][0])
         else:
             typ_= self.type_interpret(yaml_input['type'],yaml_input) if 'type' in yaml_input.keys() else 'None'
         descr_string = yaml_input['description'] if 'description' in yaml_input.keys() else 'no description'
@@ -174,11 +175,20 @@ from functools import reduce
         description = yaml_input['description'] if 'description' in yaml_input.keys() else 'no description'# 1
         # Below we get pass the tuple of property and required-boolean
         if 'allOf' in yaml_input.keys():
-            subseq = yaml_input['allOf']
+            subdicts = yaml_input['allOf']
+            subseq = {}
+            ref = {}
+            for item in subdicts: 
+                if '$ref' in item.keys():
+                    ref.update(item)
+                else: 
+                    subseq.update(item)
+            #ref = {**subdict for subdict in subdicts if '$ref' in subdict.keys()}
+            #subseq = {}.update([subdict for subdict in subdicts if '$ref' not in subdict.keys()])
             required = subseq['required'] if 'required' in subseq.keys() else []
             properties =  [self.prop_interpret(val,key,key in required) for key,val in subseq['properties'].items()] \
                       if 'properties' in subseq.keys() else None#3
-            parent = self.ref_interpret(subseq['$ref'])
+            parent = self.ref_interpret(ref)
         else: 
             required = yaml_input['required'] if 'required' in yaml_input.keys() else []
             parent = 'BaseModel'
@@ -236,6 +246,8 @@ class {0}({3}):
         
 class OAS(Interpreter):
     "Subclass for OAS-interpretation."
+    #TODO: Create formatting spec-file s.t. generated stubs etc. can 
+    #      be easily modified and tailored based on API. 
     #TODO: Additional support for the OAS-structures:
     # - components 
     # - - schemas (same struct at yaml. )
@@ -246,21 +258,63 @@ class OAS(Interpreter):
     # - - name: 
     # - - description
     # - openapi (str)  - versioning
+    # 
+    # Import explicit schemas from the DataModel-generation ? 
     def __init__(self, yaml_input):
         #Interpreter.__init__()
-        self.components
-        self.servers = yaml_input['servers'] 
+        self.components = yaml_input['components']
+        self.imports = {} # Track imports from data-model, and explicitly import ? 
+        self.info = yaml_input['info']
         self.tags = yaml_input['tags'] #name, descript
-        self.openapi = yaml_input['openapi'] # versioning. 
-        self.header = """
-        """
+        self.header =r'''#!/usr/bin/env python3
+"""
+Project: {title}
+OpenAPI: {openapi}
+----
+{info}
+----
+{tags}
+"""
+from enum import Enum
+from pydantic import BaseModel, Field
+from typing import List, Union, Tuple
+from functools import reduce
+
+'''.format(info=self.unpack_info(yaml_input),
+           openapi=yaml_input['openapi'],
+           title=yaml_input['info']['title'],
+           tags=tags) #1
+
+
     
-    def make_get(self, yaml_input):
-        "make get-request"
+    def unpack_info(self,yaml_input):
+        "information-unpack , including open-api versioning. "
+        #TODO: Pull format of info from external spec. 
+        info = yaml_input['info']
+        description = info['description']
+        version=info['version']
+        title=info['title']
+        contact=info['contact']
+        license_= info['license']
+        formatting = r"""```{title}```
+{version}
+        """.format(title=title,
+        )
+    
+    def interpret_paths(self,yaml_input):
         
+        paths = yaml_input['paths']
         
-    def make_post(self,yaml_input):
-        "make post request"
+    def unpack_path(self,yaml_input):
+        "extract a path"
+
+    def make_request(self, yaml_input):
+        "make request"
+        request_type = yaml_input[]
+        template = r'''
+        
+        '''
+        
     
     def make_components(self,yaml_input):
         "basically pad with same as model-interpreting"
@@ -276,14 +330,14 @@ def write_to_py(content,filename='yaml_test.py'):
     with open(filename,'w') as f:
         f.write(content)    
 
-def Build_From_Yaml(filename):
+def Build_From_Yaml(filename,asname='yaml_test.py'):
     "Generic function to build from a yaml-filename"
     yaml_from_file = read_yaml(filename)
     #TODO: build-directory
     test = Interpreter() 
     test.definitions_interpreter(yaml_from_file)
     
-    write_to_py(test.export())
+    write_to_py(test.export(),asname)
 
 
 
