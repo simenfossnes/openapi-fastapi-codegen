@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 """
+#TODO: Come up with proper statement etc. here. 
 Generic Statement to be inserted here... 
 """
 from enum import Enum
@@ -29,7 +30,8 @@ class fileFormat(str,Enum):
     """
     The specific information encoding method used.
     """
-    mp4 = 'mp4'
+    jpg = 'jpg'
+    png = 'png'
 
 class feedbackPreference(str,Enum):
     """
@@ -138,16 +140,16 @@ class difficulty(str,Enum):
     """
     The difficulty level of the challenge.
     """
-    advanced = 'Advanced'
-    beginner = 'Beginner'
-    intermediate = 'Intermediate'
+    beginner = 'beginner'
+    intermediate = 'intermediate'
+    advanced = 'advanced'
 
 class ChallengeTypes(str,Enum):
     """
     The type of challenge.
     """
-    livequiz = 'live_quiz'
     onlineproject = 'online_project'
+    livequiz = 'live_quiz'
 
 class CourseTypes(str,Enum):
     """
@@ -160,7 +162,6 @@ class CourseTypes(str,Enum):
 ##########
 # Models #
 ##########
-# independent Models:
 
 class id(BaseModel):
     '''
@@ -199,7 +200,7 @@ class country(BaseModel):
 
 class language(BaseModel):
     '''
-    A two-letter ISO code ([ISO 639-3](https://en.wikipedia.org/wiki/ISO_639-3)), representing the language.
+    A three-letter ISO code ([ISO 639-3](https://en.wikipedia.org/wiki/ISO_639-3)), representing the language.
     '''
     pass
 
@@ -207,6 +208,20 @@ class language(BaseModel):
 class url(BaseModel):
     '''
     A universal resource identifier (URI), according to the [RFC3986](https://tools.ietf.org/html/rfc3986) standard.
+    '''
+    pass
+
+
+class fileUpload(BaseModel):
+    '''
+    no description
+    '''
+    pass
+
+
+class public(BaseModel):
+    '''
+    If true, this object will be available for all active users.
     '''
     pass
 
@@ -240,16 +255,6 @@ object in a structured format.
     pass
 
 
-class Language(BaseModel):
-    '''
-    no description
-    '''
-    languagecode: str = Field(..., description="Unique identifier for the language")
-    nativename: str = Field(..., description="The name in navige tongue")
-    englishname: str = Field(..., description="The name of the language in")
-    flagsrc: str = Field(..., description="A link to a flag image representing that language")
-
-
 class ProgrammingLanguage(BaseModel):
     '''
     A structure of the programming langague
@@ -262,7 +267,7 @@ class File(BaseModel):
     '''
     An object with information about a file.
     '''
-    id: timestamp = Field(..., description="no description")
+    id: id = Field(..., description="no description")
     created: timestamp = Field(..., description="no description")
     title: str = Field(None, description="A user friendly title for the file.")
     filename: str = Field(None, description="A filename for the file, suitable for saving to a filesystem.")
@@ -334,28 +339,39 @@ class Organization(BaseModel):
     '''
     id: id = Field(..., description="no description")
     name: str = Field(..., description="The name of the orgnization.")
-    organizationnumber: str = Field(None, description="The number given, proving that the organization exists.")
+    organizationnumber: str = Field(None, description="The number issued by the government, proving that the organization exists.")
     visionstatement: str = Field(None, description="A short, descriptive text of what future the organization aims to bring about.")
     type: OrganizationType = Field(..., description="no description")
     organizationbranding: OrganizationBranding = Field(None, description="no description")
+    icon: fileUpload = Field(None, description="File upload. An icon for the organization. Must be square and at least 128px x 128px.")
+    logo: fileUpload = Field(None, description="File Upload. A logo for the organization that will be used in on pages. Must be at least 128px x 128px.")
 
 
 class OrganizationBranding(BaseModel):
     '''
     The branding associated with the organization.
     '''
-    icon: File = Field(None, description="An icon for the account. Must be square and at least 128px x 128px.")
-    logo: File = Field(None, description="A logo for the account that will be used in on pages. Must be at least 128px x 128px.")
-    primarycolor: str = Field(None, description="A CSS hex color value representing the primary branding color for this account.")
+    icon: File = Field(None, description="An icon for the organization. Must be square and at least 128px x 128px.")
+    logo: File = Field(None, description="A logo for the organization that will be used in on pages. Must be at least 128px x 128px.")
+    primarycolor: str = Field(None, description="A CSS hex color value representing the primary branding color for this organization.")
 
 
 class Expression(BaseModel):
     '''
     An expression is a captured moment of menaingful communication - in a speficic medium and/or form.
     '''
-    id: id = Field(..., description="no description")
-    created: timestamp = Field(..., description="no description")
+    id: id = Field(None, description="no description")
+    created: timestamp = Field(None, description="no description")
+    creator: userId = Field(None, description="no description")
     type: ExpressionTypes = Field(..., description="no description")
+
+
+class BlobExpressions(BaseModel):
+    '''
+    Common properties for Expressions holding binary large objects.
+    '''
+    src: File = Field(None, description="no description")
+    file: fileUpload = Field(None, description="no description")
 
 
 class TextExpression(Expression):
@@ -386,39 +402,31 @@ class CodeExpression(Expression):
     type: ExpressionTypes = Field(None, description="no description")
 
 
-class ImageExpression(Expression):
+class ImageExpression(BlobExpressions):
     '''
     Expressions captured in image form.
     '''
-    src: url = Field(..., description="no description")
-    fileformat: fileFormat = Field(..., description="The specific information encoding method used.")
     type: ExpressionTypes = Field(None, description="no description")
 
 
-class AudioExpression(Expression):
+class AudioExpression(BlobExpressions):
     '''
     Expressions captured in the form of sound.
     '''
-    src: url = Field(..., description="no description")
-    fileformat: fileFormat = Field(..., description="The specific information encoding method used.")
     type: ExpressionTypes = Field(None, description="no description")
 
 
-class AnimationExpression(Expression):
+class AnimationExpression(BlobExpressions):
     '''
     Expressions captured in image sequence form; without sound.
     '''
-    src: url = Field(..., description="no description")
-    fileformat: fileFormat = Field(..., description="The specific information encoding method used.")
     type: ExpressionTypes = Field(None, description="no description")
 
 
-class VideoExpression(Expression):
+class VideoExpression(BlobExpressions):
     '''
     Expressions captured in video form.
     '''
-    src: url = Field(..., description="no description")
-    fileformat: fileFormat = Field(..., description="The specific information encoding method used.")
     type: ExpressionTypes = Field(None, description="no description")
 
 
@@ -428,7 +436,9 @@ class Exercise(BaseModel):
     '''
     id: id = Field(..., description="no description")
     created: timestamp = Field(..., description="no description")
-    promoimage: url = Field(None, description="no description")
+    creator: userId = Field(None, description="no description")
+    promoimage: fileUpload = Field(None, description="File upload. An image used to promote the exercise.")
+    displayinfo: object = Field(None, description="Information related to how the exercise will be displayed.")
     description: List[None] = Field(..., description="A set of expressions combined to form a rich description of the activity requested.")
     type: ExerciseTypes = Field(..., description="no description")
 
@@ -502,6 +512,8 @@ problem stated in the exercise description.
 
     '''
     id: id = Field(..., description="no description")
+    creator: userId = Field(None, description="no description")
+    exerciseid: id = Field(None, description="no description")
     created: timestamp = Field(..., description="no description")
     status: str = Field(..., description="Correction/validation stage, going by whether the answer has been.")
     type: AnswerTypes = Field(..., description="no description")
@@ -509,7 +521,42 @@ problem stated in the exercise description.
 
 class AnswerTypes(ExerciseTypes):
     '''
-    no description
+    The shape of an answer is based on the type of exercise (and, potentially at some point, a choice of expression selected by the user).
+    '''
+    pass
+
+
+class FreeFormAnswer(Answer):
+    '''
+    ... constituting an answer to a `Free Form Exercise`.
+    '''
+    pass
+
+
+class MultipleChoiceAnswer(Answer):
+    '''
+    ... constituting an answer to a `Multiple Choice Exercise`.
+    '''
+    pass
+
+
+class FillInTheBlankAnswer(Answer):
+    '''
+    ... constituting an answer to a `Fill In The Blank Exercise`.
+    '''
+    pass
+
+
+class CommandLineAnswer(Answer):
+    '''
+    ... constituting an answer to a `Command Line Exercise`.
+    '''
+    pass
+
+
+class CodeSnippetAnswer(Answer):
+    '''
+    ... constituting an answer to a `Code Snippet Exercise`.
     '''
     pass
 
@@ -522,12 +569,27 @@ class CodebaseAnswer(Answer):
     archiveformat: archiveFormat = Field(..., description="The type of archive. Currently only supporting zip files.")
 
 
+class DatabaseAnswer(Answer):
+    '''
+    ... constituting an answer to a `Database Exercise`.
+    '''
+    pass
+
+
+class CodeReviewAnswer(Answer):
+    '''
+    ... constituting an answer to a `Code Review Exercise`.
+    '''
+    pass
+
+
 class CorrectionBlueprint(BaseModel):
     '''
     The blueprint for how to correct an answer to an exercise.
     '''
     id: id = Field(..., description="no description")
     created: timestamp = Field(..., description="no description")
+    creator: userId = Field(None, description="no description")
     type: ExerciseTypes = Field(..., description="no description")
     allowautomaticcorrection: bool = Field(None, description="Whether to allow automatic correction or not.")
     allowmanualcorrection: bool = Field(None, description="Whether to allow manual correction or not.")
@@ -537,7 +599,12 @@ class CorrectionBlueprint(BaseModel):
 
 class Requirement(BaseModel):
     '''
-    A specific element you expect to be part of a correct solution.
+    A specific element you expect to be part of a correct solution. A 
+requirement is like an interface - it defines what should be tested, 
+but it is not the implementation of the test itself. This allows us to 
+apply different approaches to testing the same set of things (e.g. 
+manual correction, automatic correction, ai correction, etc.), and to 
+compare these approaches and implementations with each other.
     '''
     id: id = Field(..., description="no description")
     title: str = Field(..., description="A indicative text for the requirement.")
@@ -547,11 +614,27 @@ class Requirement(BaseModel):
     failureresponses: List[Feedback] = Field(..., description="A set of potential feedback objects to display to students upon failing requirement.")
 
 
+class AutomaticCorrectionImplementation(BaseModel):
+    '''
+    The automatic correction implementation contains a bundle of test cases that provide a possible implementation to the correction blueprint proposed by the correction blueprint creator.
+    '''
+    id: id = Field(None, description="no description")
+    created: timestamp = Field(None, description="no description")
+    creator: userId = Field(None, description="no description")
+    model: str = Field(None, description="The key is an requirement id from the correction blueprint, and the value is a set of test cases.")
+
+
 class TestCase(BaseModel):
     '''
-    The tests used to automaticaly correct the requirements
+    The tests used to automaticaly correct the requirements. The test 
+case is like the implementation of the interface defined in a 
+requirement. More specifically, a test case provides an implementation 
+in the realm of automatic correction. Since test cases are very specific 
+they don't need much contextual information in order to be executed.
     '''
     id: id = Field(..., description="no description")
+    created: timestamp = Field(None, description="no description")
+    creator: userId = Field(None, description="no description")
     type: TestCaseTypes = Field(..., description="no description")
     visibility: visibility = Field(..., description="Whether or not to show the test case.")
     explaincommonerrors: bool = Field(..., description="Whether or not to explain universal and common errors.")
@@ -591,7 +674,7 @@ class CustomTestCase(TestCase):
     type: TestCaseTypes = Field(None, description="no description")
 
 
-class CodeQualityTestCase(TestCase):
+class LintingTestCase(TestCase):
     '''
     More general test case definition for code quality
     '''
@@ -625,6 +708,7 @@ class CorrectionRecord(BaseModel):
     The model for a recorded correction result.
     '''
     id: id = Field(..., description="no description")
+    created: timestamp = Field(None, description="no description")
     type: CorrectionRecordType = Field(..., description="no description")
 
 
@@ -632,14 +716,13 @@ class AutmaticCorrectionRecord(CorrectionRecord):
     '''
     The model for recorded automatic correction results.
     '''
-    id: id = Field(None, description="no description")
     type: CorrectionRecordType = Field(None, description="no description")
-    testcaseinput: bool = Field(..., description="The input of the test case.")
-    compilerstacktrace: bool = Field(..., description="Whether to show the compiler/debug output to the student or not.")
-    exercutionstacktrace: bool = Field(..., description="Whether to show the exercution output to the student or not.")
-    studentsolutionoutput: bool = Field(..., description="Whether to show the output of the student's code to the student or not.")
-    expectedsolutionoutput: bool = Field(..., description="Whether to show the expected output to the student or not.")
-    outputdifference: bool = Field(..., description="Whether to show the difference between the supplied and expected output to the student or not.")
+    testcaseinput: str = Field(..., description="The input of the test case.")
+    compilerstacktrace: str = Field(..., description="Whether to show the compiler/debug output to the student or not.")
+    exercutionstacktrace: str = Field(..., description="Whether to show the exercution output to the student or not.")
+    studentsolutionoutput: str = Field(..., description="Whether to show the output of the student's code to the student or not.")
+    expectedsolutionoutput: str = Field(..., description="Whether to show the expected output to the student or not.")
+    outputdifference: str = Field(..., description="Whether to show the difference between the supplied and expected output to the student or not.")
 
 
 class ManualCorrectionRecord(CorrectionRecord):
@@ -658,12 +741,21 @@ class AICorrectionRecord(CorrectionRecord):
     type: CorrectionRecordType = Field(None, description="no description")
 
 
+class ClientCorrectionBundle(BaseModel):
+    '''
+    An object containing mainly key-value pairs of answer hashes and feedback.
+    '''
+    id: id = Field(None, description="no description")
+    model: object = Field(None, description="The object containing mainly key-value pairs of answer hashes and feedback.")
+
+
 class Feedback(BaseModel):
     '''
     Content and emotion produced in reaction to something. The materialization of something felt or thought in response to a situation or event. It can be affirmative, constructive, etc.
     '''
     id: id = Field(..., description="no description")
     created: timestamp = Field(..., description="no description")
+    creator: userId = Field(None, description="no description")
     emoji: str = Field(None, description="A representation of the emotional state associated with the feedback message.")
     description: List[Expression] = Field(..., description="A set of expressions combined to form a rich feedback message.")
 
@@ -673,30 +765,21 @@ class Challenge(BaseModel):
     Basically a set of exercises combined for the purpose of testing skills.
     '''
     id: id = Field(..., description="no description")
-    object: object = Field(None, description="no description")
-    type: ChallengeTypes = Field(..., description="no description")
+    object: object = Field(..., description="no description")
     created: timestamp = Field(..., description="no description")
-    title: str = Field(..., description="A short text describing the challenge.")
-    tagline: str = Field(..., description="A short add-on text, adding more details to the title.")
-    description: List[ChallengeDescriptionSection] = Field(None, description="A in-depth text describing the challenge.")
+    creator: userId = Field(None, description="no description")
+    title: str = Field(None, description="A short text describing the challenge.")
+    tagline: str = Field(None, description="A short add-on text, adding more details to the title.")
+    description: List[object] = Field(None, description="A in-depth text describing the challenge.")
     tags: List[str] = Field(None, description="A set of keywords related to the challenge.")
-    promoimage: str = Field(..., description="A visual description of the challenge.")
-    promovideo: str = Field(None, description="In-depth stimulating descrpitionof the challenge.")
-    duration: int = Field(None, description="Total time, measured in seconds")
+    promoimage: str = Field(None, description="A visual description of the challenge.")
+    promovideo: str = Field(None, description="In-depth stimulating descrpition of the challenge.")
+    availabilityranges: List[object] = Field(None, description="The durations where people will be able to take the challenge.")
     difficulty: difficulty = Field(None, description="The difficulty level of the challenge.")
-    langauges: List[Language] = Field(None, description="The supported languages for this challenge.")
+    langauges: List[language] = Field(None, description="The supported languages for this challenge.")
     exercises: List[Exercise] = Field(None, description="The exercises making up the challenge.")
-    organizers: List[Organization] = Field(..., description="The organization(s) hosting the challenge")
-
-
-class ChallengeDescriptionSection(BaseModel):
-    '''
-    no description
-    '''
-    headline: str = Field(None, description="The headline of the section.")
-    bodycopy: str = Field(None, description="Approximately a paragraph of text describing the section.")
-    label: str = Field(None, description="A piece of text describing the section.")
-    featuredexpression: Expression = Field(None, description="no description")
+    organizers: List[Organization] = Field(None, description="The organization(s) hosting the challenge")
+    published: bool = Field(None, description="If the challenge is published, it'll be listed in the public challenge catalog. If not, only the ones with the right link will be able to access it. This meets the need for recruiters to prevent solicitation of pre-vetted candidates.")
 
 
 class OnlineProjectChallenge(Challenge):
@@ -719,6 +802,7 @@ class Course(BaseModel):
     '''
     id: id = Field(..., description="no description")
     created: timestamp = Field(..., description="no description")
+    creator: userId = Field(None, description="no description")
     type: CourseTypes = Field(..., description="no description")
     title: str = Field(..., description="The title of the course")
     tagline: str = Field(..., description="no description")
@@ -777,7 +861,49 @@ class ContentAdapter(BaseModel):
     id: id = Field(..., description="no description")
     created: timestamp = Field(..., description="no description")
     expression: Expression = Field(..., description="The main part of the content adapter; an expression.")
-    exercises: List[Exercise] = Field(..., description="The exercises connected to the expression, through the content adapter.")      
+    exercises: List[Exercise] = Field(..., description="The exercises connected to the expression, through the content adapter.")
+
+
+class Report(BaseModel):
+    '''
+    a filtered set of data points required to present a report. for the purpose of teaching something.
+    '''
+    challengeid: id = Field(None, description="no description")
+    userid: userId = Field(None, description="no description")
+    totalscore: None = Field(None, description="The total score achieved by the user for the given challenge.")
+    totaltime: None = Field(None, description="The total time in seconds spent by the user for the given challenge.")
+    challengeinfo: Challenge = Field(None, description="no description")
+    finalanswer: Answer = Field(None, description="A reference to the final answer provided by the user to the given challenge.")
+    bestfinalanswer: Answer = Field(None, description="The best answer in terms of overall quality, structure and simplicity.")
+    exerciseresults: List[object] = Field(None, description="no description")
+
+
+class ChallengeReport(Report):
+    '''
+    a filtered set of data points required to present a challenge report.
+    '''
+    challengeid: id = Field(None, description="no description")
+
+
+class RecruiterChallengeReport(ChallengeReport):
+    '''
+    a filtered set of data points, optimized to meet the needs of a recruiter, that forms the basis for displaying a report.
+    '''
+    recruitervalue: str = Field(None, description="no description")
+
+
+class JobSeekerChallengeReport(ChallengeReport):
+    '''
+    a filtered set of data points, optimized to meet the needs of a job seeker, that forms the basis for displaying a report.
+    '''
+    jobseekervalue: str = Field(None, description="no description")
+
+
+class OrganizationChallengeReport(ChallengeReport):
+    '''
+    a filtered set of data points, optimized to meet the needs of a job seeker, that forms the basis for displaying a report.
+    '''
+    jobseekervalue: str = Field(None, description="no description")      
 
         
         
