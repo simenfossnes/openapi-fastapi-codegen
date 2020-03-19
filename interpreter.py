@@ -95,11 +95,15 @@ class Interpreter:
     TODO: Check Program Flow. 
     TODO: Split the interpretation of YAML and OAS.yaml. 
     """
-    def __init__(self): 
+    def __init__(self,path=''): 
         "Currently just setting up containers for sorting."
         # Note: need to sort the models in order of dependencies. 
         # This means that we'll have to store a map 
         
+        self.path = path # main path of 
+        # ext_source = '../rel-location/file.yaml#' : read_yaml(source)
+        self.ext_sources = defaultdict(dict) #read once.
+        # ext_schema = 'parent#/definitions/somename' : str of schema
         self.header_yaml = r'''#!/usr/bin/env python3
 """
 #TODO: Come up with proper statement etc. here. 
@@ -107,7 +111,7 @@ Generic Statement to be inserted here...
 """
 from enum import Enum
 from pydantic import BaseModel, Field
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple,NewType
 from functools import reduce
 '''
        # Model = Schema, Type = Enum, et.c. 
@@ -117,9 +121,34 @@ from functools import reduce
         # ^on the name-space, this is used for refs. so storing them 
         #  currently only by their 
         self.model_refs = defaultdict(list) # name : name 
+        self.unions = defaultdict(str)
         
         # references are from models to models, or types to models
         self.name = "<name of yaml + loc>"
+        
+    def resolve_external_source(self,location):
+        "Imports any referenced yaml-files to include the schemas from there"
+        print('resolving external location:\n')
+        print(self.path, location)
+        rel_loc = os.path.join(self.path,location)
+        self.ext_sources[location] = read_yaml(rel_loc)
+        
+    def resolve_external_schema(self,location,schema):
+        "schemas imported from external sources <source>#<schema>"
+        schema_split = schema.split('/')[1:]
+        print('resolving schema location:')
+        print(schema_split)
+        title = schema_split[-1]
+        if title in self.models.keys() or title in self.types.keys():
+            pass
+        else:
+            if location in self.ext_sources.keys():
+                pass
+            else: 
+                self.resolve_external_source(location)
+            # Find the target schema, and resolve the interpretation.
+            target_schema = reduce(lambda x,y: x[y], schema_split, self.ext_sources[location])
+            self.schema_interpreter(target_schema,title,location)
         
     def export_yaml(self):
         "export function when the yaml has been worked through"
@@ -147,22 +176,34 @@ from functools import reduce
         "exports the content as individual files or as a filetree-like structure"
         #TODO: Fix this 
         
-    def ref_interpret(self,yaml_input):
+    def ref_interpret(self,yaml_input,location=''):
         "For each case of $ref we need to store a pointer in the model_maps\
-        that tells us the order we wish to declare these in. "        
-        ref = yaml_input['$ref'].split('/')[-1] #assuming it's at an end
+        that tells us the order we wish to declare these in. "
+        dirname,name = yaml_input['$ref'].split('#') # Will only be two. 
+        dirname = location+dirname
+        print('ref-debug:')
+        print(name)
+        print(dirname, name)
+    
+        ref = name[1].split('/')[-1] #assuming it's at an end
+        if ref in self.models or ref in self.types:
+            pass
+        else: #need to ensure it's made. 
+            if dirname != '':
+                # external location, need to resolve. 
+                self.resolve_external_schema(dirname,name)
         return ref
-        # Check if existing in namespace, in which case use that reference. 
+       
         
         
         
     
-    def enum_interpret(self,yaml_input,name):
+    def enum_interpret(self,yaml_input,name,location=''):
         "for cases where we have enums, we need to extract these, and build them \
         as their own BaseModel-cases. "
         descr = yaml_input['description'] if 'description' in yaml_input.keys() else '...Generic description...'
         title = name #if name[0].isupper() else name.capitalize() #yaml_input['title'] if 'title' in yaml_input.keys() else name
-        typ = self.type_interpret(yaml_input['type'],yaml_input,title) if 'type' in yaml_input.keys() else str
+        typ = self.type_interpret(yaml_input['type'],yaml_input,title,location) if 'type' in yaml_input.keys() else str
         
         enum_lines = [r"{0} = '{1}'".format(string_convert(cont.lower()),cont) for cont in yaml_input['enum']]
         print(name,enum_lines)
@@ -178,7 +219,7 @@ from functools import reduce
         self.types[title] = content
         return title # returns this so that it's 
     
-    def type_interpret(self,type_string,yaml_input,body_of):
+    def type_interpret(self,type_string,yaml_input,body_of,location=''):
         "interpret and translate types to admissible ones.\
         need to specify subtypes for the arrays etc."
         
@@ -189,92 +230,109 @@ from functools import reduce
                  'boolean' : 'bool'}
         if type_string == 'array':
             #print(yaml_input)
-            return "List[{}]".format(self.item_interpret(yaml_input['items'],body_of) if 'items' in yaml_input.keys() else 'str')
+            return "List[{}]".format(self.item_interpret(yaml_input['items'],body_of,location) if 'items' in yaml_input.keys() else 'str')
         elif 'allOf' in yaml_input.keys():
-            interpreted= self.ref_interpret(yaml_input['allOf'][0])
+            interpreted= self.ref_interpret(yaml_input['allOf'][0],location)
             self.model_refs[body_of].append(interpreted)
             return interpreted
         elif 'oneOf' in yaml_input.keys():
             union_list = []
             for el in yaml_input['oneOf']:
-                interpreted= self.ref_interpret(el)
+                interpreted= self.ref_interpret(el,location)
                 self.model_refs[body_of].append(interpreted)
                 union_list.append(interpreted)
-            #Creawte Union
+            #Create Union
             return "Union[{}]".format(reduce(lambda x,y: "{},{}".format(x,y), union_list))
             
         elif type_string in types.keys():
             return types[type_string]
     
-    def item_interpret(self,items,body_of=None):
+    def item_interpret(self,items,body_of=None,location=''):
         "for items in an array. "
         for key,val in items.items():
             if key == '$ref':
-                interpreted= self.ref_interpret(items)
+                interpreted= self.ref_interpret(items,location)
                 self.model_refs[body_of].append(interpreted)
                 return interpreted
             elif key == 'anyOf' or key=='oneOf':
-                contents = [self.ref_interpret(item) for item in val]
-                map(lambda item: self.model_refs[body_of].append(item),contents)
-                return "Union[{}]".format(reduce(lambda x,y: "{},{}".format(x,y), contents))
+                refs = [self.ref_interpret(item,location) for item in val]
+                for ref in refs:
+                    self.model_refs[body_of].append(ref)
+                return "Union[{}]".format(reduce(lambda x,y: "{},{}".format(x,y), refs))
                 
             elif type(val) == list: 
                 str
             else: 
-                return self.type_interpret(items['type'],items,body_of)
+                return self.type_interpret(items['type'],items,body_of,location)
         
     
-    def prop_interpret(self,yaml_input,name,required,body_of):
+    def prop_interpret(self,yaml_input,name,required,body_of,location=''):
         "Interpret properties-field (smaller dictionary)"
         #TODO: Catch prop with $ref into ref_interpreter ?
         title = name #yaml_input['title'] if 'title' in yaml_input.keys() else name
         req = '...' if required else None
         #TODO: Make more elegant if-elif thingy 
         if 'enum' in yaml_input.keys():
-            typ_ = self.enum_interpret(yaml_input,name)
+            typ_ = self.enum_interpret(yaml_input,name,location)
         elif '$ref' in yaml_input.keys():
-            typ_ = self.ref_interpret(yaml_input)
+            typ_ = self.ref_interpret(yaml_input,location)
             self.model_refs[body_of].append(typ_)
         elif 'allOf' in yaml_input.keys():
-            typ_ = self.ref_interpret(yaml_input['allOf'][0])
+            typ_ = self.ref_interpret(yaml_input['allOf'][0],location)
         else:
-            typ_= self.type_interpret(yaml_input['type'],yaml_input,title) if 'type' in yaml_input.keys() else 'None'
+            typ_= self.type_interpret(yaml_input['type'],yaml_input,title,location) if 'type' in yaml_input.keys() else 'None'
         descr_string = yaml_input['description'] if 'description' in yaml_input.keys() else 'no description'
         description = '"{}"'.format(descr_string.replace('\n',' ')) if descr_string else '"no description"'
         return r"""{0}: {1} = Field({2}, description={3})""".format(string_convert(title).lower(),typ_,req,description)
         
     
-    def schema_interpreter(self,yaml_input,name):
+    def schema_interpreter(self,yaml_input,name,location=''):
         "Take in a single schema and unpack it."
+        # Need to also explicitly resolve the location to handle external schemas
         #print(name)
         #print(yaml_input.keys())
         title = name#yaml_input['title'] if 'title' in yaml_input.keys() else name #0
-
+        typ_ = self.type_interpret(yaml_input['type'],yaml_input,title,location) if 'type' in yaml_input.keys() else 'None'
         description = yaml_input['description'] if 'description' in yaml_input.keys() else 'no description'# 1
         # Below we get pass the tuple of property and required-boolean
         properties = None
         extends = 'BaseModel'
         if 'allOf' in yaml_input.keys():
+            print('in allOf', title)
             subdicts = yaml_input['allOf']
             subseq = {}
             ref = {}
             for item in subdicts: 
                 if '$ref' in item.keys():
-                    ref.update(item)
+                    ref.update(item) #string concat.
                 else: 
                     subseq.update(item)
+            #print('refs:',name,ref)
             #ref = {**subdict for subdict in subdicts if '$ref' in subdict.keys()}
             #subseq = {}.update([subdict for subdict in subdicts if '$ref' not in subdict.keys()])
             required = subseq['required'] if 'required' in subseq.keys() else []
-            properties =  [self.prop_interpret(val,key,key in required,title) for key,val in subseq['properties'].items()] \
+            properties =  [self.prop_interpret(val,key,key in required,title,location) for key,val in subseq['properties'].items()] \
                            if 'properties' in subseq.keys() else None#3
-            parent = self.ref_interpret(ref)
+            parent = self.ref_interpret(ref,location)
             self.model_refs[title].append(parent)
             
-        elif 'anyOf' or 'oneOf' in yaml_input.keys():
+        elif 'oneOf' in yaml_input.keys():
             #TODO: make Union object. 
+            refs_to = [self.ref_interpret(ref,location) for ref in yaml_input['oneOf'] ]
+            refs_string = reduce(lambda x,y: "{},{}".format(x,y), refs_to)
+            typ_ = "Union[{}]".format(refs_string)
+            for ref in refs_to:
+                self.model_refs[title].append(ref)
             
-        
+        elif 'anyOf' in yaml_input.keys():
+            refs_to = [self.ref_interpret(ref,location) for ref in yaml_input['allOf'] ]
+            # reduce to single string: 
+            refs_string = reduce(lambda x,y: "{},{}".format(x,y), refs_to)
+            typ_ = "Union[{}]".format(refs_string)
+            for ref in refs_to:
+                self.model_refs[title].append(ref)
+            
+
         #    pass
         #elif 'properties' not in yaml_input.keys():
             # just a description and a type assumed 
@@ -284,12 +342,13 @@ from functools import reduce
         else: 
             required = yaml_input['required'] if 'required' in yaml_input.keys() else []
             parent = 'BaseModel'
-            properties = [self.prop_interpret(val,key,key in required,title) for key,val in yaml_input['properties'].items()] \
+            properties = [self.prop_interpret(val,key,key in required,title,location) for key,val in yaml_input['properties'].items()] \
                           if 'properties' in yaml_input.keys() else None#3
         
         #tpe = yaml_input['type'] #2
         # Add in interpretation of inherited #allOf etc. 
-        content= r"""
+        if properties: 
+            content= r"""
 class {title}({extends}):
     '''
     {description}
@@ -300,8 +359,15 @@ class {title}({extends}):
                     root="__root__: %s\n    "% parent if not parent == "BaseModel" else "",
                     props= reduce(lambda x,y: "{}\n    {}".format(x,y), properties) if properties else "pass",
                     )
-        self.models[title] = content
-        self.namespace[title] = 'Models'
+            self.models[title] = content
+            self.namespace[title] = 'Models'
+        else: 
+            content= r"""
+{title} = NewType("{title}",{typ})            
+""".format(title=string_convert(title),typ=typ_)
+            self.types[title] = content
+            self.namespace[title] = 'Types'
+        
         
     def interpretation_staging(self,dict_of_names, map_of_dependencies):
         #TODO: stage the components, i.e. sort based on references
@@ -354,8 +420,10 @@ class OAS(Interpreter):
     # - openapi (str)  - versioning
     # 
     # Import explicit schemas from the DataModel-generation ? 
-    def __init__(self, yaml_input):
-        Interpreter.__init__(self) # inhertining lots of stuff
+    def __init__(self, yaml_input,path=''):
+        
+        self.path = path
+        Interpreter.__init__(self,path) # inhertining lots of stuff
         self.functions = {} # following same pattern
         self.responses = {}
         #self.tags = yaml_input['tags'] #name, descript
@@ -377,8 +445,8 @@ from typing import List, Union, Tuple
 from starlette.responses import JSONResponse
 #from DataModel import * # DockerFile places this in app-directory but not really necessary ? 
 
-# Test Relative Imports : #TODO:check this works
-#from src import *
+# Relative imports within the src-material but not from top-layer here. 
+from src import *
 app = FastAPI()
 
 
@@ -396,6 +464,7 @@ app = FastAPI()
         types_and_models.update(self.models)
         types_and_models = self.sorting_algo(types_and_models,self.model_refs)
         #print(non_dependent)
+        print('going out:\n',types_and_models)
         functions = [func_val for func_name,func_val in self.functions.items()]
         #quickfix: nixed {models} from below. 
         output = r'''{header}
@@ -427,6 +496,7 @@ from . import * # this is sorta blind import of everything from the main-init...
 from .Models import * 
 from .Logic import * 
 from .Routes import *'''
+        #Note: main_init not correctly resolvable. 
         main_init = r'''#Note, not sure if this one is needed. 
 from .src import *
 from .dist import *'''
@@ -445,8 +515,8 @@ from .dist import *'''
                                            ]}},
                     'dist':{'':[('README.md', '##<TODO>: build to dist-folder')]},
                     '':[Path('data/Dockerfile'), #copy from data/Dockerfile. 
-                        ('main.py', self.export_oas()),
-                        ('__init__.py',main_init)]
+                        ('main.py', self.export_oas())]
+                        #('__init__.py',main_init)]
                     }
         return filetree
             
@@ -466,7 +536,7 @@ from .dist import *'''
         full_list = [key for key in types_and_models if key not in sortlist]
         full_list.extend(sortlist)
         content = [types_and_models[el] for el in full_list]
-        print('types_and_models: \n',content)
+        #print('types_and_models: \n',content)
         
         return content
         
@@ -632,13 +702,15 @@ def Build_From_Yaml(filename,asname='test/yaml_test.py'):
     write_to_py(test.export_yaml(),asname)
 
 def Build_OAS(filename,asname='test/main.py'):
+    workdir= os.path.dirname(filename)
+    print(workdir)
     yaml_from_file = read_yaml(filename)
     #build_directories(reduce(lambda x,y: os.path.join(x,y),asname.split('/')[:-1]))
-    test = OAS(yaml_from_file)
+    test = OAS(yaml_from_file,workdir)
     test.build_oas(yaml_from_file)
     #write_to_py(test.export_as_filetree(),asname)
     export_ready= test.export_as_filetree()
-    print('this',export_ready)
+    #print('this',export_ready)
     build_directories(export_ready,'test')
 
     
@@ -650,7 +722,8 @@ if __name__ == '__main__':
     """
     If you want to execute this, run: 
     > python thisfile.py yaml-source target-app-name
-    
+    Path-resolution in case meeting any outwards dependencies 
+    #TODO: Fix by allowing 
     """
     yaml_file = sys.argv[1]
     

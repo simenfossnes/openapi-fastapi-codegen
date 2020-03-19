@@ -44,8 +44,8 @@ from typing import List, Union, Tuple
 from starlette.responses import JSONResponse
 #from DataModel import * # DockerFile places this in app-directory but not really necessary ? 
 
-# Test Relative Imports : #TODO:check this works
-#from src import *
+# Relative imports within the src-material but not from top-layer here. 
+from src import *
 app = FastAPI()
 
 
@@ -57,7 +57,7 @@ from . import * # this is sorta blind import of everything from the main-init...
 
 
 @app.post("/answers")
-async def post_answers(AnswerDTO):
+async def post_answers(c):
     """
     none
     """
