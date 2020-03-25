@@ -3,7 +3,8 @@
 # For testing puroposes (only?)
 # Also is probably not needed for actual deployment, but an artefact of 
 # my shitty setup/..
-service=$1
+
+service="test"
 echo "services available: \n - challenge \n- activity-logger"
 sudo docker build -f ./"${service[@]}"/Dockerfile -t "${service[@]}"-image ./
 # need to do the stop and rm in an if statement, unless these have been done before.

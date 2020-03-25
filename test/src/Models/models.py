@@ -21,10 +21,6 @@ userId = NewType("userId",str)
 
 timestamp = NewType("timestamp",None)            
 
-
-
-ExerciseTypes = NewType("ExerciseTypes",str)            
-
 class archiveFormat(str,Enum):
     """
     The type of archive. Currently only supporting zip files.
@@ -32,9 +28,7 @@ class archiveFormat(str,Enum):
     zip = 'zip'
 
 
-
-AnswerDTO = NewType("AnswerDTO",Union[c,c,c,c,c,c,c,c])            
-
+ExerciseTypes = NewType("ExerciseTypes",str)            
 
 
 
@@ -48,12 +42,12 @@ an exercise. In other words, it's a response that attempts to answer the
 problem stated in the exercise description.
 
     '''
-    id: d = Field(..., description="no description")
-    creator: d = Field(None, description="no description")
-    exerciseid: d = Field(None, description="no description")
-    created: d = Field(..., description="no description")
+    id: id = Field(..., description="no description")
+    creator: userId = Field(None, description="no description")
+    exerciseid: id = Field(None, description="no description")
+    created: timestamp = Field(..., description="no description")
     status: str = Field(..., description="Correction/validation stage, going by whether the answer has been.")
-    type: d = Field(..., description="no description")
+    type: AnswerTypes = Field(..., description="no description")
 
 
 FreeFormAnswer = NewType("FreeFormAnswer",None)            
@@ -99,7 +93,7 @@ class CodebaseAnswer(BaseModel):
     '''
     Files and folders (filesystem) constituting an answer to a `Codebase Exercise`.
     '''
-    __root__: d
+    __root__: Answer
     archive: str = Field(..., description="The answer in the form of an archived file system.")
     archiveformat: archiveFormat = Field(..., description="The type of archive. Currently only supporting zip files.")
 
@@ -124,4 +118,8 @@ CodeReviewAnswerDTO = NewType("CodeReviewAnswerDTO",None)
 
 
 
-AnswerListDTO = NewType("AnswerListDTO",List[Union[c,c,c,c,c,c,c,c]])            
+AnswerDTO = NewType("AnswerDTO",Union[FreeFormAnswerDTO,MultipleChoiceAnswerDTO,FillInTheBlankAnswerDTO,CommandLineAnswerDTO,CodeSnippetAnswerDTO,CodebaseAnswerDTO,DatabaseAnswerDTO,CodeReviewAnswerDTO])            
+
+
+
+AnswerListDTO = NewType("AnswerListDTO",List[Union[FreeFormAnswerDTO,MultipleChoiceAnswerDTO,FillInTheBlankAnswerDTO,CommandLineAnswerDTO,CodeSnippetAnswerDTO,CodebaseAnswerDTO,DatabaseAnswerDTO,CodeReviewAnswerDTO]])            

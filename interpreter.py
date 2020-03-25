@@ -136,8 +136,7 @@ from functools import reduce
     def resolve_external_schema(self,location,schema):
         "schemas imported from external sources <source>#<schema>"
         schema_split = schema.split('/')[1:]
-        print('resolving schema location:')
-        print(schema_split)
+        
         title = schema_split[-1]
         if title in self.models.keys() or title in self.types.keys():
             pass
@@ -181,15 +180,16 @@ from functools import reduce
         that tells us the order we wish to declare these in. "
         dirname,name = yaml_input['$ref'].split('#') # Will only be two. 
         dirname = location+dirname
-        print('ref-debug:')
-        print(name)
-        print(dirname, name)
+        
     
-        ref = name[1].split('/')[-1] #assuming it's at an end
-        if ref in self.models or ref in self.types:
+        ref = name.split('/')[-1] #assuming it's at an end
+        if ref in self.models.keys() or ref in self.types.keys():
             pass
         else: #need to ensure it's made. 
             if dirname != '':
+                print('ref-debug:')
+                print(name)
+                print(dirname, name)
                 # external location, need to resolve. 
                 self.resolve_external_schema(dirname,name)
         return ref
@@ -206,7 +206,7 @@ from functools import reduce
         typ = self.type_interpret(yaml_input['type'],yaml_input,title,location) if 'type' in yaml_input.keys() else str
         
         enum_lines = [r"{0} = '{1}'".format(string_convert(cont.lower()),cont) for cont in yaml_input['enum']]
-        print(name,enum_lines)
+        print('enum:',name,enum_lines)
         content= r'''class {0}({1},Enum):
     """
     {2}
@@ -464,7 +464,7 @@ app = FastAPI()
         types_and_models.update(self.models)
         types_and_models = self.sorting_algo(types_and_models,self.model_refs)
         #print(non_dependent)
-        print('going out:\n',types_and_models)
+        #print('going out:\n',types_and_models)
         functions = [func_val for func_name,func_val in self.functions.items()]
         #quickfix: nixed {models} from below. 
         output = r'''{header}
@@ -507,10 +507,12 @@ from .dist import *'''
 
         filetree = {'src': {'':[('__init__.py',src_init)],
                             'Logic':{'':[('__init__.py','#Append with\n#from .package import *')]},
-                            'Routes':{'':[('__init__.py','#Append with\n#from .package import *\n#from .routes import *')
-                                           #('routes.py', self.file_formatting(self.functions.values()))
+                            'Routes':{'':[('__init__.py','#Append with\n#from .package import *\n#from .routes import *\n#from .responses import *')
+                                           ('responses.py',"#Dummy content for now"),
+                                           ('routes.py', "#Nothing for now.")
                                            ]},
                             'Models':{'':[('models.py',self.file_formatting(types_and_models)),
+                                          
                                           ('__init__.py','#Append with\n#from .package import *\nfrom .models import *')
                                            ]}},
                     'dist':{'':[('README.md', '##<TODO>: build to dist-folder')]},

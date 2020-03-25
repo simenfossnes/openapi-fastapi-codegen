@@ -57,7 +57,7 @@ from . import * # this is sorta blind import of everything from the main-init...
 
 
 @app.post("/answers")
-async def post_answers(c):
+async def post_answers(AnswerDTO):
     """
     none
     """
