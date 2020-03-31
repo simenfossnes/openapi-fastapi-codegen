@@ -189,7 +189,7 @@ def doc_handler(docstring):
     
         ref = name.split('/')[-1] #assuming it's at an end
         if ref in self.models.keys() or ref in self.types.keys():
-            pass
+            return ref
         else: #need to ensure it's made. 
             if dirname != '':
                 print('ref-debug:')
@@ -197,7 +197,7 @@ def doc_handler(docstring):
                 print(dirname, name)
                 # external location, need to resolve. 
                 self.resolve_external_schema(dirname,name)
-        return ref
+            return ref
        
         
         
@@ -370,6 +370,9 @@ class {title}({extends}):
                     )
             self.models[title] = content
             self.namespace[title] = 'Models'
+        elif 'enum' in yaml_input.keys(): 
+            self.enum_interpret(yaml_input,name,location=location)
+            
         else: 
             content= r"""
 {title} = NewType("{title}",{typ})
@@ -536,7 +539,7 @@ from .dist import *'''
     def file_formatting(self,content):
         "Wrap the content in header etc, +imports "
         
-        return reduce(lambda x,y: '{}\n{}'.format(x,y),content,self.header_yaml)
+        return reduce(lambda x,y: '{}\n{}\n'.format(x,y),content,self.header_yaml)
     
     def sorting_algo(self,types_and_models,order_graph):
         "Will just default sort the types and models into a single list"
@@ -597,8 +600,9 @@ license: {license_}
         request_body = self.make_request_body(yaml_input['requestBody']) if 'requestBody' in yaml_input.keys() else ''
         #request_body=''
         request_string=r'@app.{request}({params})'.format(request=request_type,params=params_list)
+        #TODO: Request body vs path-parameters. 
         template = r'''{request}
-async def {func_name}({request_body}):
+async def {func_name}(request_body: {request_body}):
     """
     {documentation}
     """
