@@ -1,40 +1,32 @@
 #!/usr/bin/env python3
 
 """
-Project: Answer Service
+Project: User Grouping Service
 OpenAPI: 3.0.2
 ----
-```Answer Service```
+```User Grouping Service```
 version: 0.1.0
 contact: {'name': 'Developer @Sci-Code', 'url': 'https://sci-code.com', 'email': 'developer@sci-code.com'}
-description: Answers are responses to exercises. Some of them are correct, some of them not.
-The Answer Service deals with everything that's necessary to keep track of 
-answers to exercises over time. 
+description: User Grouping is about dividing users into a number
+of groups such that users in the same groups are more similar
+to other users in the same group than those in other groups.
+In simple words, the aim is to groups users that share certain traits
+into clusters.
 
 # Introduction
 
-The answers service handles some advanced processing of certain answers. For example, an 
-answer to the popular codebase exercise type requires processing of archived files usually
-in a zip file, and then a translation into multiple post requests for each file that has 
-changed since the last posted answer to the same exercise.
-
-# Answer Types
-
-The structure of answers depends on the exercise types they answer. The exercise 
-types which form the basis for answer types can be seen below.
-
-<p align="center">
-  <img alt="exercise types" src="/spec-assets/exercise-types.svg" />
-</p>
+The User Grouping service allows us to group users in various
+ways, using different techniques. We can assign users to certain
+data structures, or we can group them algoritmically using various
+clustering algorithms.
 
 # Authentication
 
 This API supports OAuth2, and more specifically, the implicit flow.
-
 license: {'name': 'Copyright © Sci-Code Inc. All Rights Reserved', 'url': 'https://sci-code.com'}
         
 ----
-[{'name': 'Answers', 'description': 'An answer to an exercise. Exercises can sometimes\ncombine together to form more advanced structures.\n\nE.g. Many codebase exercises combined in sequence \nform a project. Projects can be used \n(and useful) both for teaching and assessment.\n'}]
+[{'name': 'Organizations', 'description': "The ```Organizations``` object holds information about an Organization\nand it's members. It is one of the core groups that users on the platfrom \ncan be a part of. We have different types of organizations; everything from \ncompanies to NGOs to government agencies.\n"}]
 """
 from enum import Enum
 from functools import reduce
@@ -56,24 +48,32 @@ from . import * # this is sorta blind import of everything from the main-init...
 
 
 
-@app.post("/answers")
-async def post_answers(AnswerDTO):
+@app.post("/organizations")
+async def post_organizations(OrganizationDTO):
     """
     none
     """
     return None
         
 
-@app.get("/answers")
-async def get_answers():
+@app.get("/organizations")
+async def get_organizations():
     """
     none
     """
     return None
         
 
-@app.get("/answers/{id}")
-async def get_answersid():
+@app.get("/organizations/{id}")
+async def get_organizationsid():
+    """
+    none
+    """
+    return None
+        
+
+@app.put("/organizations/{id}")
+async def put_organizationsid(OrganizationDTO):
     """
     none
     """

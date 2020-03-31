@@ -9,117 +9,67 @@ from pydantic import BaseModel, Field
 from typing import List, Union, Tuple,NewType
 from functools import reduce
 
+class type(str,Enum):
+    """
+    String representing the object's type. Objects of the same type share the same value.
+    """
+    file = 'file'
+class fileFormat(str,Enum):
+    """
+    The specific information encoding method used.
+    """
+    jpg = 'jpg'
+    png = 'png'
+
+
+fileUpload = NewType("fileUpload",str)            
+
+
+class OrganizationBranding(BaseModel):
+    '''
+    The branding associated with the organization.
+    '''
+    icon: File = Field(None, description="An icon for the organization. Must be square and at least 128px x 128px.")
+    logo: File = Field(None, description="A logo for the organization that will be used in on pages. Must be at least 128px x 128px.")
+    primarycolor: str = Field(None, description="A CSS hex color value representing the primary branding color for this organization.")
+
+
+OrganizationType = NewType("OrganizationType",str)            
+
+
+class Organization(BaseModel):
+    '''
+    An organized group of people with a particular purpose, such as a business, government agency, non-profit, etc.
+    '''
+    id: id = Field(..., description="no description")
+    name: str = Field(..., description="The name of the orgnization.")
+    organizationnumber: str = Field(None, description="The number issued by the government, proving that the organization exists.")
+    visionstatement: str = Field(None, description="A short, descriptive text of what future the organization aims to bring about.")
+    type: OrganizationType = Field(..., description="no description")
+    organizationbranding: OrganizationBranding = Field(None, description="no description")
+    icon: fileUpload = Field(None, description="File upload. An icon for the organization. Must be square and at least 128px x 128px.")
+    logo: fileUpload = Field(None, description="File Upload. A logo for the organization that will be used in on pages. Must be at least 128px x 128px.")
 
 
 id = NewType("id",str)            
 
 
 
-userId = NewType("userId",str)            
-
-
-
 timestamp = NewType("timestamp",None)            
 
-class archiveFormat(str,Enum):
-    """
-    The type of archive. Currently only supporting zip files.
-    """
-    zip = 'zip'
 
-
-ExerciseTypes = NewType("ExerciseTypes",str)            
-
-
-
-AnswerTypes = NewType("AnswerTypes",None)            
-
-
-class Answer(BaseModel):
+class File(BaseModel):
     '''
-    An answer provides a potential solution produced in response to interpreting 
-an exercise. In other words, it's a response that attempts to answer the 
-problem stated in the exercise description.
-
+    An object with information about a file.
     '''
     id: id = Field(..., description="no description")
-    creator: userId = Field(None, description="no description")
-    exerciseid: id = Field(None, description="no description")
     created: timestamp = Field(..., description="no description")
-    status: str = Field(..., description="Correction/validation stage, going by whether the answer has been.")
-    type: AnswerTypes = Field(..., description="no description")
+    title: str = Field(None, description="A user friendly title for the file.")
+    filename: str = Field(None, description="A filename for the file, suitable for saving to a filesystem.")
+    type: type = Field(..., description="String representing the object's type. Objects of the same type share the same value.")
+    size: None = Field(..., description="The size in bytes of the file object.")
+    fileformat: fileFormat = Field(None, description="The specific information encoding method used.")
+    url: str = Field(..., description="The URL from which the file can be downloaded using your live secret API key.")
 
 
-FreeFormAnswer = NewType("FreeFormAnswer",None)            
-
-
-
-FreeFormAnswerDTO = NewType("FreeFormAnswerDTO",None)            
-
-
-
-MultipleChoiceAnswer = NewType("MultipleChoiceAnswer",None)            
-
-
-
-MultipleChoiceAnswerDTO = NewType("MultipleChoiceAnswerDTO",None)            
-
-
-
-FillInTheBlankAnswer = NewType("FillInTheBlankAnswer",None)            
-
-
-
-FillInTheBlankAnswerDTO = NewType("FillInTheBlankAnswerDTO",None)            
-
-
-
-CommandLineAnswer = NewType("CommandLineAnswer",None)            
-
-
-
-CommandLineAnswerDTO = NewType("CommandLineAnswerDTO",None)            
-
-
-
-CodeSnippetAnswer = NewType("CodeSnippetAnswer",None)            
-
-
-
-CodeSnippetAnswerDTO = NewType("CodeSnippetAnswerDTO",None)            
-
-
-class CodebaseAnswer(BaseModel):
-    '''
-    Files and folders (filesystem) constituting an answer to a `Codebase Exercise`.
-    '''
-    __root__: Answer
-    archive: str = Field(..., description="The answer in the form of an archived file system.")
-    archiveformat: archiveFormat = Field(..., description="The type of archive. Currently only supporting zip files.")
-
-
-CodebaseAnswerDTO = NewType("CodebaseAnswerDTO",None)            
-
-
-
-DatabaseAnswer = NewType("DatabaseAnswer",None)            
-
-
-
-DatabaseAnswerDTO = NewType("DatabaseAnswerDTO",None)            
-
-
-
-CodeReviewAnswer = NewType("CodeReviewAnswer",None)            
-
-
-
-CodeReviewAnswerDTO = NewType("CodeReviewAnswerDTO",None)            
-
-
-
-AnswerDTO = NewType("AnswerDTO",Union[FreeFormAnswerDTO,MultipleChoiceAnswerDTO,FillInTheBlankAnswerDTO,CommandLineAnswerDTO,CodeSnippetAnswerDTO,CodebaseAnswerDTO,DatabaseAnswerDTO,CodeReviewAnswerDTO])            
-
-
-
-AnswerListDTO = NewType("AnswerListDTO",List[Union[FreeFormAnswerDTO,MultipleChoiceAnswerDTO,FillInTheBlankAnswerDTO,CommandLineAnswerDTO,CodeSnippetAnswerDTO,CodebaseAnswerDTO,DatabaseAnswerDTO,CodeReviewAnswerDTO]])            
+OrganizationDTO = NewType("OrganizationDTO",None)            

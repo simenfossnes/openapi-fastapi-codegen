@@ -113,6 +113,11 @@ from enum import Enum
 from pydantic import BaseModel, Field
 from typing import List, Union, Tuple,NewType
 from functools import reduce
+
+def doc_handler(docstring):
+    "for resolving documentation of functions and classes"
+    return docstring.strip('\n').strip()
+    
 '''
        # Model = Schema, Type = Enum, et.c. 
         self.models = {} # Name: string-interpretation (raw-str)
@@ -281,19 +286,23 @@ from functools import reduce
             typ_ = self.ref_interpret(yaml_input['allOf'][0],location)
         else:
             typ_= self.type_interpret(yaml_input['type'],yaml_input,title,location) if 'type' in yaml_input.keys() else 'None'
-        descr_string = yaml_input['description'] if 'description' in yaml_input.keys() else 'no description'
-        description = '"{}"'.format(descr_string.replace('\n',' ')) if descr_string else '"no description"'
+        descr_string = yaml_input['description'] if 'description' in yaml_input.keys() else None
+        description = '"{}"'.format(descr_string.replace('\n',' ')) if descr_string else 'doc_handler({})'.format(typ_)
         return r"""{0}: {1} = Field({2}, description={3})""".format(string_convert(title).lower(),typ_,req,description)
         
     
     def schema_interpreter(self,yaml_input,name,location=''):
         "Take in a single schema and unpack it."
+        #TODO: Make handling of writeOnly/readOnly-keywords to generate 
+        #      duplicate models for request-/response-models
+        # e.g. if writeOnly => only in request schema
+        #      if readOnly => only in response schema
         # Need to also explicitly resolve the location to handle external schemas
         #print(name)
         #print(yaml_input.keys())
         title = name#yaml_input['title'] if 'title' in yaml_input.keys() else name #0
         typ_ = self.type_interpret(yaml_input['type'],yaml_input,title,location) if 'type' in yaml_input.keys() else 'None'
-        description = yaml_input['description'] if 'description' in yaml_input.keys() else 'no description'# 1
+        description = yaml_input['description'] if 'description' in yaml_input.keys() else '%s has no description'%title# 1
         # Below we get pass the tuple of property and required-boolean
         properties = None
         extends = 'BaseModel'
@@ -363,8 +372,9 @@ class {title}({extends}):
             self.namespace[title] = 'Models'
         else: 
             content= r"""
-{title} = NewType("{title}",{typ})            
-""".format(title=string_convert(title),typ=typ_)
+{title} = NewType("{title}",{typ})
+{title}.__doc__ = "{description}"
+""".format(title=string_convert(title),typ=typ_,description=description.strip('\n').strip())
             self.types[title] = content
             self.namespace[title] = 'Types'
         
@@ -506,14 +516,14 @@ from .dist import *'''
         types_and_models = self.sorting_algo(types_and_models,self.model_refs)
 
         filetree = {'src': {'':[('__init__.py',src_init)],
-                            'Logic':{'':[('__init__.py','#Append with\n#from .package import *')]},
-                            'Routes':{'':[('__init__.py','#Append with\n#from .package import *\n#from .routes import *\n#from .responses import *')
-                                           ('responses.py',"#Dummy content for now"),
-                                           ('routes.py', "#Nothing for now.")
+                            'Logic':{'':[('__init__.py','#Append with\n#from .package import *\n')]},
+                            'Routes':{'':[('__init__.py','#Append with\n#from .package import *\n#from .routes import *\n#from .responses import *\n'),
+                                           ('responses.py',"#Dummy content for now\n"),
+                                           ('routes.py', "#Nothing for now.\n")
                                            ]},
                             'Models':{'':[('models.py',self.file_formatting(types_and_models)),
                                           
-                                          ('__init__.py','#Append with\n#from .package import *\nfrom .models import *')
+                                          ('__init__.py','#Append with\n#from .package import *\nfrom .models import *\n')
                                            ]}},
                     'dist':{'':[('README.md', '##<TODO>: build to dist-folder')]},
                     '':[Path('data/Dockerfile'), #copy from data/Dockerfile. 
@@ -704,6 +714,7 @@ def Build_From_Yaml(filename,asname='test/yaml_test.py'):
     write_to_py(test.export_yaml(),asname)
 
 def Build_OAS(filename,asname='test/main.py'):
+    #TODO: proper parent-build
     workdir= os.path.dirname(filename)
     print(workdir)
     yaml_from_file = read_yaml(filename)
@@ -725,8 +736,13 @@ if __name__ == '__main__':
     If you want to execute this, run: 
     > python thisfile.py yaml-source target-app-name
     Path-resolution in case meeting any outwards dependencies 
-    #TODO: Fix by allowing 
+    #TODO: 
+    - args : target folder. 
     """
     yaml_file = sys.argv[1]
+    # if OAS run build-oas 
     
+    # else: run yaml-build. 
+    
+    # 
     
