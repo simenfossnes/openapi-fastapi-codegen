@@ -8,7 +8,7 @@ Generate FastAPI server stubs based on an open api specification file.
 
 <br>
 
-## 🚀 Get Up and Running in 5 Minutes
+## 🚀 Getting Started
 
 You can get everything up and running in five minutes or less, following these steps:
 
